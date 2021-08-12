@@ -28,6 +28,10 @@ type PostponeRequest struct {
 	Source string
 }
 
+type Postponer interface {
+	Postpone(PostponeRequest) bool
+}
+
 type Switch struct {
 	logger Logger
 

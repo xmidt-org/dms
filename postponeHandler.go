@@ -2,16 +2,16 @@ package main
 
 import "net/http"
 
-type SwitchHandler struct {
-	Switch *Switch
+type PostponeHandler struct {
+	Postponer Postponer
 }
 
-func (sh SwitchHandler) ServeHTTP(response http.ResponseWriter, request *http.Request) {
+func (ph PostponeHandler) ServeHTTP(response http.ResponseWriter, request *http.Request) {
 	pr := PostponeRequest{
 		Source: request.RemoteAddr,
 	}
 
-	if sh.Switch.Postpone(pr) {
+	if ph.Postponer.Postpone(pr) {
 		response.WriteHeader(http.StatusOK)
 	} else {
 		response.WriteHeader(http.StatusServiceUnavailable)

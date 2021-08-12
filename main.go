@@ -40,15 +40,16 @@ func run(args []string) error {
 
 				return
 			},
-			func(cl *CommandLine, s fx.Shutdowner, l Logger, actions []Action) *Switch {
-				return NewSwitch(l, cl.TTL, cl.Misses, actions...)
+			func(cl *CommandLine, l Logger, actions []Action) (*Switch, Postponer) {
+				s := NewSwitch(l, cl.TTL, cl.Misses, actions...)
+				return s, s
 			},
-			func(s *Switch) SwitchHandler {
-				return SwitchHandler{
-					Switch: s,
+			func(p Postponer) PostponeHandler {
+				return PostponeHandler{
+					Postponer: p,
 				}
 			},
-			func(cl *CommandLine, h SwitchHandler) *http.Server {
+			func(cl *CommandLine, h PostponeHandler) *http.Server {
 				address := cl.Listen
 
 				// just a port is allowed
