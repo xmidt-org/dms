@@ -21,3 +21,11 @@ report.json
 
 # Vim
 *.swp
+
+# Project name
+dms
+
+.ignore
+errors.txt
+
+

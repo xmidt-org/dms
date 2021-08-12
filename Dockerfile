@@ -1,6 +1,6 @@
 FROM docker.io/library/golang:1.15-alpine as builder
 
-MAINTAINER Jack Murdock <jack_murdock@comcast.com>
+MAINTAINER John Bass <john_bass2@cable.comcast.com>
 
 WORKDIR /src
 
@@ -25,18 +25,15 @@ RUN make test release
 FROM alpine:3.12.1
 
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=builder /src/__PROJECT__ /src/__PROJECT__.yaml /src/deploy/packaging/entrypoint.sh /go/bin/spruce /src/Dockerfile /src/NOTICE /src/LICENSE /src/CHANGELOG.md /
-COPY --from=builder /src/deploy/packaging/__PROJECT__.yaml /tmp/__PROJECT__.yaml
+COPY --from=builder /src/dms /src/dms.yaml /src/deploy/packaging/entrypoint.sh /go/bin/spruce /src/Dockerfile /src/NOTICE /src/LICENSE /src/CHANGELOG.md /
+COPY --from=builder /src/deploy/packaging/dms.yaml /tmp/dms.yaml
 
-RUN mkdir /etc/__PROJECT__/ && touch /etc/__PROJECT__/__PROJECT__.yaml && chmod 666 /etc/__PROJECT__/__PROJECT__.yaml
+RUN mkdir /etc/dms/ && touch /etc/dms/dms.yaml && chmod 666 /etc/dms/dms.yaml
 
 USER nobody
 
 ENTRYPOINT ["/entrypoint.sh"]
 
-EXPOSE 6600
-EXPOSE 6601
-EXPOSE 6602
-EXPOSE 6603
+EXPOSE 11000
 
-CMD ["/__PROJECT__"]
+CMD ["/dms"]

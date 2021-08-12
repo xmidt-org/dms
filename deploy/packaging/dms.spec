@@ -1,16 +1,16 @@
 %define __os_install_post %{nil}
 %define debug_package %{nil}
 
-Name:       __PROJECT__
+Name:       dms
 Version:    {{{ git_tag_version }}}
 Release:    1%{?dist}
-Summary:    __PROJECT__ summary here.
+Summary:    a command-line dead man's switch
 
 Vendor:     Comcast
 Packager:   Comcast
 Group:      System Environment/Daemons
 License:    ASL 2.0
-URL:        https://github.com/xmidt-org/__PROJECT__
+URL:        https://github.com/xmidt-org/dms
 Source0:    %{name}-%{version}.tar.gz
 
 Prefix:     /opt
@@ -20,7 +20,7 @@ BuildRequires: golang >= 1.15
 BuildRequires: git
 
 %description
-__PROJECT__ description here.
+a command-line dead man's switch
 
 %prep
 %setup -q

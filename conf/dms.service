@@ -1,12 +1,12 @@
 [Unit]
-Description=__PROJECT__ description here
+Description=a command-line dead man's switch
 After=network.target remote-fs.target nss-lookup.target
 
 [Service]
 Type=simple
-PIDFile=/run/__PROJECT__.pid
-ExecStartPre=/usr/bin/rm -f /run/__PROJECT__.pid
-ExecStart=/usr/bin/__PROJECT__
+PIDFile=/run/dms.pid
+ExecStartPre=/usr/bin/rm -f /run/dms.pid
+ExecStart=/usr/bin/dms
 ExecReload=/bin/kill -s HUP $MAINPID
 TimeoutStopSec=10
 KillMode=process
