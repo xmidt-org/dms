@@ -8,15 +8,15 @@ linters:
     - bodyclose
     - dupl
     - errorlint
-    - funlen
     - goconst
-    - gosec
     - misspell
     - unconvert
     - prealloc
   disable:
     - errcheck
     - ineffassign
+    - funlen
+    - gosec
 
 issues:
   exclude-rules:
