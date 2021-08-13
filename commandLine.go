@@ -21,7 +21,9 @@ func parseCommandLine(args []string) (cl *CommandLine, err error) {
 	var k *kong.Kong
 	k, err = kong.New(
 		cl,
-		kong.Description("A dead man's switch which invokes an action when a heartbeat stops"),
+		kong.Description(
+			"A dead man's switch which invokes one or more actions unless postponed on regular intervals.  To postpone the action(s), issue an HTTP PUT to /postpone, with no body, to the configured listen address.",
+		),
 	)
 
 	if err == nil {
