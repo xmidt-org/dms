@@ -8,7 +8,7 @@ import (
 
 type CommandLine struct {
 	Exec   []string      `name:"exec" short:"e" required:"" help:"one or more commands to execute when the switch triggers"`
-	Dir    string        `name:"dir" short:"d" optional:"" help:"the working directory for the command"`
+	Dir    string        `name:"dir" short:"d" optional:"" help:"the working directory for all commands"`
 	Listen string        `name:"listen" short:"l" default:":8080" help:"the listen address or port"`
 	TTL    time.Duration `name:"ttl" short:"t" default:"1m" help:"the maximum interval for TTL updates to keep the switch open"`
 	Misses int           `name:"misses" short:"m" default:"1" help:"the maximum number of missed updates allowed before the switch closes"`
