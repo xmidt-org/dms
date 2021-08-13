@@ -12,7 +12,7 @@ type CommandLine struct {
 	Listen string        `name:"listen" short:"l" default:":8080" help:"the listen address or port"`
 	TTL    time.Duration `name:"ttl" short:"t" default:"1m" help:"the maximum interval for TTL updates to keep the switch open"`
 	Misses int           `name:"misses" short:"m" default:"1" help:"the maximum number of missed updates allowed before the switch closes"`
-	Debug  bool          `name:"debug" short:"d" default:"false" help:"produce debug logging"`
+	Debug  bool          `name:"debug" default:"false" help:"produce debug logging"`
 }
 
 func parseCommandLine(args []string) (cl *CommandLine, err error) {
