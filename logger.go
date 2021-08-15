@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 	"io"
+	"os"
+
+	"go.uber.org/fx"
 )
 
 type Logger interface {
@@ -18,4 +21,12 @@ func (wl WriterLogger) Printf(format string, args ...interface{}) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func provideLogger() fx.Option {
+	return fx.Provide(
+		func() Logger {
+			return WriterLogger{Writer: os.Stdout}
+		},
+	)
 }

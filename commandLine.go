@@ -1,9 +1,12 @@
 package main
 
 import (
+	"io"
+	"os"
 	"time"
 
 	"github.com/alecthomas/kong"
+	"go.uber.org/fx"
 )
 
 type CommandLine struct {
@@ -15,20 +18,36 @@ type CommandLine struct {
 	Debug  bool          `name:"debug" default:"false" help:"produce debug logging"`
 }
 
-func parseCommandLine(args []string) (cl *CommandLine, err error) {
-	cl = new(CommandLine)
-
-	var k *kong.Kong
-	k, err = kong.New(
-		cl,
-		kong.Description(
-			"A dead man's switch which invokes one or more actions unless postponed on regular intervals.  To postpone the action(s), issue an HTTP PUT to /postpone, with no body, to the configured listen address.",
-		),
+func parseCommandLine(args []string) fx.Option {
+	var (
+		options []fx.Option
+		cl      CommandLine
+		k, err  = kong.New(
+			&cl,
+			kong.Description(
+				"A dead man's switch which invokes one or more actions unless postponed on regular intervals.  To postpone the action(s), issue an HTTP PUT to /postpone, with no body, to the configured listen address.",
+			),
+		)
 	)
 
 	if err == nil {
 		_, err = k.Parse(args)
 	}
 
-	return
+	if err == nil {
+		var debug Logger
+		if cl.Debug {
+			debug = WriterLogger{Writer: os.Stdout}
+		} else {
+			debug = WriterLogger{Writer: io.Discard}
+		}
+
+		options = append(options, fx.Logger(debug), fx.Supply(cl))
+	}
+
+	if err != nil {
+		options = append(options, fx.Error(err))
+	}
+
+	return fx.Options(options...)
 }
