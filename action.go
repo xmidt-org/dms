@@ -30,7 +30,7 @@ func (ca CmdAction) Execute() error {
 	return ca.Cmd.Run()
 }
 
-func ParseExec(cl *CommandLine) ([]Action, error) {
+func ParseExec(cl CommandLine) ([]Action, error) {
 	actions := make([]Action, 0, len(cl.Exec))
 
 	for _, e := range cl.Exec {
@@ -61,4 +61,17 @@ func (sa ShutdownerAction) String() string {
 
 func (sa ShutdownerAction) Execute() error {
 	return sa.Shutdowner.Shutdown()
+}
+
+func provideActions() fx.Option {
+	return fx.Provide(
+		func(cl CommandLine, s fx.Shutdowner) (actions []Action, err error) {
+			actions, err = ParseExec(cl)
+			if err == nil {
+				actions = append(actions, ShutdownerAction{Shutdowner: s})
+			}
+
+			return
+		},
+	)
 }

@@ -5,6 +5,8 @@ import (
 	"errors"
 	"sync"
 	"time"
+
+	"go.uber.org/fx"
 )
 
 const (
@@ -138,4 +140,23 @@ func (s *Switch) Stop(context.Context) error {
 	s.postpone = nil
 	s.cancel = nil
 	return nil
+}
+
+func provideSwitch() fx.Option {
+	return fx.Options(
+		fx.Provide(
+			func(cl CommandLine, l Logger, actions []Action) (*Switch, Postponer) {
+				s := NewSwitch(l, cl.TTL, cl.Misses, actions...)
+				return s, s
+			},
+		),
+		fx.Invoke(
+			func(l fx.Lifecycle, s *Switch) {
+				l.Append(fx.Hook{
+					OnStart: s.Start,
+					OnStop:  s.Stop,
+				})
+			},
+		),
+	)
 }
