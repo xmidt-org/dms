@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 - README text
+- Refactored the main package for modularity in case we want to migrate to a separate package
 
 ## [v0.0.2]
 - Added the Postponer interface
