@@ -43,16 +43,29 @@ dms --exec "echo 'here is just one action'"
 dms --exec "echo '1'" --exec "echo '2'"
 ```
 
-### Listen address
-The `--listen` or `-l` options change the bind address for the HTTP server.  The endpoint is always /postpone at this address.  Either a simple port or a `golang` network address is allowed:
+### HTTP
+The `--http` or `-h` options change the bind address for the HTTP server.  The endpoint is always /postpone at this address.  Either a simple port or a `golang` network address is allowed:
 
 ```
-dms --exec "echo 'oh noes!'" --listen ":9100"
-dms --exec "echo 'oh noes!'" --listen 6600
-dms --exec "echo 'oh noes!'" --listen "localhost:11000"
+dms --exec "echo 'oh noes!'" --http ":9100"
+dms --exec "echo 'oh noes!'" --http 6600
+dms --exec "echo 'oh noes!'" --http "localhost:11000"
 ```
 
-If no listen address is supplied, `dms` uses `:8080`.
+The first line of output will give the HTTP address, port, and URL to use for postponing actions.
+
+If no listen address is supplied, `dms` uses `:8080`.  If the HTTP address has a port of 0, then a dynamically chosen port will be used.
+
+#### Postpone endpoint
+The **/postpone** endpoint accepts and optional `source` parameter.  This can be any desired string.  The primary use case for this parameter is to identify which tool or entity is postponing the actions.  `dms` will include both the `source` and the HTTP request's `RemoteAddr` in its output:
+
+```
+dms --exec "echo 'hi there'"
+PUT http://[::]:8080/postpone to postpone triggering actions
+postponed [source=<unset>] [remoteaddr=[::1]:60842]
+postponed [source=mytool] [remoteaddr=[::1]:60843]
+postponed [source=anothertool] [remoteaddr=[::1]:60844]
+```
 
 ### TTL
 By default, an HTTP PUT must be made to the /postpone endpoint every minute.  This can be changed with `--ttl` or `-t`, passing a string that is in the same format as `golang` durations:
