@@ -25,7 +25,7 @@ func parseCommandLine(args []string) fx.Option {
 		k, err  = kong.New(
 			&cl,
 			kong.Description(
-				"A dead man's switch which invokes one or more actions unless postponed on regular intervals.  To postpone the action(s), issue an HTTP PUT to /postpone, with no body, to the configured listen address.",
+				"A dead man's switch which invokes one or more actions unless postponed on regular intervals.  To postpone the action(s), issue an HTTP PUT to /postpone, with no body, to the configured HTTP address.",
 			),
 		)
 	)
