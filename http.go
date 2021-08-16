@@ -36,10 +36,10 @@ func provideHTTP() fx.Option {
 				}
 			},
 			func(cl CommandLine, ph PostponeHandler) *http.Server {
-				address := cl.Listen
+				address := cl.HTTP
 
 				// just a port is allowed
-				p, err := strconv.Atoi(cl.Listen)
+				p, err := strconv.Atoi(address)
 				if err == nil {
 					address = fmt.Sprintf(":%d", p)
 				}
