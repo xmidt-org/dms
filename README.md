@@ -9,7 +9,21 @@ dms is a command-line dead man's switch that will trigger one or more actions un
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=xmidt-org_PROJECT&metric=alert_status)](https://sonarcloud.io/dashboard?id=xmidt-org_PROJECT)
 [![GitHub release](https://img.shields.io/github/release/xmidt-org/dms.svg)](CHANGELOG.md)
 
-## Summary
+## Table of Contents
+
+- [Overview](#overview)
+  - [Usage](#usage)
+  - [Actions](#actions)
+  - [HTTP](#http)
+    - [Postpone Endpoint](#postpone-endpoint)
+  - [TTL](#ttl)
+  - [Misses](#misses)
+- [Code of Conduct](#code-of-conduct)
+- [Details](#details)
+- [Install](#install)
+- [Contributing](#contributing)
+
+## Overview
 
 dms is a command-line utility that will trigger one or more actions unless postponed by performing an HTTP PUT to its /postpone endpoint.
 
@@ -80,13 +94,6 @@ dms --exec "echo 'hi there'" --ttl 30s
 ```
 dms --exec "format c:" --misses 2
 ```
-
-## Table of Contents
-
-- [Code of Conduct](#code-of-conduct)
-- [Details](#details)
-- [Install](#install)
-- [Contributing](#contributing)
 
 ## Code of Conduct
 
