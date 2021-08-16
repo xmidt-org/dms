@@ -25,7 +25,7 @@ dms is a command-line dead man's switch that will trigger one or more actions un
 
 ## Overview
 
-dms is a command-line utility that will trigger one or more actions unless postponed by performing an HTTP PUT to its /postpone endpoint.
+dms is a command-line utility that will trigger one or more actions unless postponed by performing an HTTP PUT to its **/postpone** endpoint.
 
 ### Usage
 ```
@@ -33,7 +33,7 @@ dms --help
 Usage: dms --exec=EXEC,...
 
 A dead man's switch which invokes one or more actions unless postponed on
-regular intervals. To postpone the action(s), issue an HTTP PUT to /postpone,
+regular intervals. To postpone the action(s), issue an HTTP PUT to **/postpone**,
 with no body, to the configured listen address.
 
 Flags:
@@ -58,7 +58,9 @@ dms --exec "echo '1'" --exec "echo '2'"
 ```
 
 ### HTTP
-The `--http` or `-h` options change the bind address for the HTTP server.  The endpoint is always /postpone at this address.  Either a simple port or a `golang` network address is allowed:
+The `--http` or `-h` options change the bind address for the HTTP server.  The endpoint is always **/postpone** at this address.  The PUT body is ignored.
+
+Either a simple port or a `golang` network address is allowed:
 
 ```
 dms --exec "echo 'oh noes!'" --http ":9100"
@@ -82,7 +84,7 @@ postponed [source=anothertool] [remoteaddr=[::1]:60844]
 ```
 
 ### TTL
-By default, an HTTP PUT must be made to the /postpone endpoint every minute.  This can be changed with `--ttl` or `-t`, passing a string that is in the same format as `golang` durations:
+By default, an HTTP PUT must be made to the **/postpone** endpoint every minute.  This can be changed with `--ttl` or `-t`, passing a string that is in the same format as `golang` durations:
 
 ```
 dms --exec "echo 'hi there'" --ttl 30s
