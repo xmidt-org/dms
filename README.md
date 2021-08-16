@@ -18,17 +18,21 @@ dms is a command-line utility that will trigger one or more actions unless postp
 dms --help
 Usage: dms --exec=EXEC,...
 
-A dead man's switch which invokes one or more actions unless postponed on regular intervals. To postpone the action(s),
-issue an HTTP PUT to /postpone, with no body, to the configured listen address.
+A dead man's switch which invokes one or more actions unless postponed on
+regular intervals. To postpone the action(s), issue an HTTP PUT to /postpone,
+with no body, to the configured listen address.
 
 Flags:
-  -h, --help              Show context-sensitive help.
-  -e, --exec=EXEC,...     one or more commands to execute when the switch triggers
-  -d, --dir=STRING        the working directory for the command
-  -l, --listen=":8080"    the listen address or port
-  -t, --ttl=1m            the maximum interval for TTL updates to keep the switch open
-  -m, --misses=1          the maximum number of missed updates allowed before the switch closes
-      --debug             produce debug logging
+  -h, --help             Show context-sensitive help.
+  -e, --exec=EXEC,...    one or more commands to execute when the switch
+                         triggers
+  -d, --dir=STRING       the working directory for all commands
+  -h, --http=":8080"     the HTTP listen address or port
+  -t, --ttl=1m           the maximum interval for TTL updates to keep the switch
+                         open
+  -m, --misses=1         the maximum number of missed updates allowed before the
+                         switch closes
+      --debug            produce debug logging
 ```
 
 ### Actions
