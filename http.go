@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"strconv"
 
@@ -11,13 +12,25 @@ import (
 	"go.uber.org/fx"
 )
 
+const (
+	SourceParameter = "source"
+)
+
 type PostponeHandler struct {
 	Postponer Postponer
 }
 
 func (ph PostponeHandler) ServeHTTP(response http.ResponseWriter, request *http.Request) {
+	err := request.ParseForm()
+	if err != nil {
+		response.WriteHeader(http.StatusInternalServerError)
+		response.Write([]byte(err.Error()))
+		return
+	}
+
 	pr := PostponeRequest{
-		Source: request.RemoteAddr,
+		Source:     request.Form.Get(SourceParameter),
+		RemoteAddr: request.RemoteAddr,
 	}
 
 	if ph.Postponer.Postpone(pr) {
@@ -30,12 +43,12 @@ func (ph PostponeHandler) ServeHTTP(response http.ResponseWriter, request *http.
 func provideHTTP() fx.Option {
 	return fx.Options(
 		fx.Provide(
-			func(p Postponer) PostponeHandler {
-				return PostponeHandler{
-					Postponer: p,
-				}
+			func(p Postponer) *mux.Router {
+				r := mux.NewRouter()
+				r.Handle("/postpone", PostponeHandler{Postponer: p}).Methods("PUT")
+				return r
 			},
-			func(cl CommandLine, ph PostponeHandler) *http.Server {
+			func(cl CommandLine, r *mux.Router) *http.Server {
 				address := cl.HTTP
 
 				// just a port is allowed
@@ -43,9 +56,6 @@ func provideHTTP() fx.Option {
 				if err == nil {
 					address = fmt.Sprintf(":%d", p)
 				}
-
-				r := mux.NewRouter()
-				r.Handle("/postpone", ph).Methods("PUT")
 
 				return &http.Server{
 					Addr:    address,
@@ -56,10 +66,18 @@ func provideHTTP() fx.Option {
 		fx.Invoke(
 			func(l fx.Lifecycle, s fx.Shutdowner, logger Logger, server *http.Server) {
 				l.Append(fx.Hook{
-					OnStart: func(context.Context) error {
+					OnStart: func(ctx context.Context) error {
+						var lc net.ListenConfig
+						l, err := lc.Listen(ctx, "tcp", server.Addr)
+						if err != nil {
+							return err
+						}
+
+						logger.Printf("PUT http://%s/postpone to postpone triggering actions", l.Addr())
+
 						go func() {
 							defer s.Shutdown()
-							err := server.ListenAndServe()
+							err := server.Serve(l)
 							if !errors.Is(err, http.ErrServerClosed) {
 								logger.Printf("HTTP server error: %s", err)
 							}

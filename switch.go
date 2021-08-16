@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -26,8 +27,27 @@ func defaultNewTimer(d time.Duration) (<-chan time.Time, func() bool) {
 	return t.C, t.Stop
 }
 
+// PostponeRequest carries information about a postponement to a Switch.
 type PostponeRequest struct {
+	// Source is an identifier for the entity that is postponing the actions.
 	Source string
+
+	// RemoteAddr is the remote IP address from which the postpone request came.
+	// This field can be unset for requests which do not come from a network connection.
+	RemoteAddr string
+}
+
+func (pr PostponeRequest) String() string {
+	source := pr.Source
+	if len(source) == 0 {
+		source = "<unset>"
+	}
+
+	if len(pr.RemoteAddr) > 0 {
+		return fmt.Sprintf("[source=%s] [remoteaddr=%s]", source, pr.RemoteAddr)
+	} else {
+		return fmt.Sprintf("[source=%s]", source)
+	}
 }
 
 type Postponer interface {
@@ -67,7 +87,6 @@ func NewSwitch(l Logger, ttl time.Duration, maxMisses int, actions ...Action) *S
 }
 
 func (s *Switch) loop(postpone <-chan PostponeRequest, cancel <-chan struct{}) {
-	s.logger.Printf("starting switch loop")
 	var misses int
 
 	for {
@@ -76,7 +95,8 @@ func (s *Switch) loop(postpone <-chan PostponeRequest, cancel <-chan struct{}) {
 		case pr := <-postpone:
 			stop()
 			misses = 0
-			s.logger.Printf("postponed [source=%s]", pr.Source)
+
+			s.logger.Printf("postponed %s", pr)
 
 		case <-cancel:
 			stop()
