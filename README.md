@@ -73,7 +73,7 @@ The first line of output will give the HTTP address, port, and URL to use for po
 If no listen address is supplied, `dms` uses `:8080`.  If the HTTP address has a port of 0, then a dynamically chosen port will be used.
 
 #### Postpone endpoint
-The **/postpone** endpoint accepts and optional `source` parameter.  This can be any desired string.  The primary use case for this parameter is to identify which tool or entity is postponing the actions.  `dms` will include both the `source` and the HTTP request's `RemoteAddr` in its output:
+The **/postpone** endpoint accepts an optional `source` parameter.  This can be any desired string.  The primary use case for this parameter is to identify which tool or entity is postponing the actions.  `dms` will include both the `source` and the HTTP request's `RemoteAddr` in its output:
 
 ```
 dms --exec "echo 'hi there'"
