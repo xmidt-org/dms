@@ -23,6 +23,10 @@ func (wl WriterLogger) Printf(format string, args ...interface{}) {
 	}
 }
 
+type DiscardLogger struct{}
+
+func (dl DiscardLogger) Printf(string, ...interface{}) {}
+
 func provideLogger() fx.Option {
 	return fx.Provide(
 		func() Logger {

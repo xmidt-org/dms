@@ -111,7 +111,7 @@ func (s *Switch) loop(postpone <-chan PostponeRequest, cancel <-chan struct{}) {
 				s.logger.Printf("triggering actions")
 				for _, a := range s.actions {
 					s.logger.Printf("[%s]", a.String())
-					if err := a.Execute(); err != nil {
+					if err := a.Run(); err != nil {
 						s.logger.Printf("action error: %s", err)
 					}
 				}
