@@ -10,7 +10,7 @@ import (
 func run(args []string) error {
 	app := fx.New(
 		parseCommandLine(args),
-		provideLogger(),
+		provideLogger(os.Stdout),
 		provideActions(),
 		provideSwitch(),
 		provideHTTP(),
