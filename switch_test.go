@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strconv"
 	"testing"
 	"time"
 
@@ -28,6 +29,51 @@ func TestDefaultNewTimer(t *testing.T) {
 	}
 
 	stop()
+}
+
+func TestPostponeRequest(t *testing.T) {
+	testCases := []struct {
+		request  PostponeRequest
+		contains []string
+	}{
+		{
+			request:  PostponeRequest{},
+			contains: []string{DefaultSource},
+		},
+		{
+			request: PostponeRequest{
+				RemoteAddr: "127.0.0.1",
+			},
+			contains: []string{DefaultSource, "127.0.0.1"},
+		},
+		{
+			request: PostponeRequest{
+				Source: "testytest",
+			},
+			contains: []string{"testytest"},
+		},
+		{
+			request: PostponeRequest{
+				Source:     "testytest",
+				RemoteAddr: "127.0.0.1",
+			},
+			contains: []string{"testytest", "127.0.0.1"},
+		},
+	}
+
+	for i, testCase := range testCases {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			var (
+				assert = assert.New(t)
+				s      = testCase.request.String()
+			)
+
+			assert.NotEmpty(s)
+			for _, v := range testCase.contains {
+				assert.Contains(s, v)
+			}
+		})
+	}
 }
 
 type SwitchSuite struct {
