@@ -53,7 +53,7 @@ type PostponeRequest struct {
 func (pr PostponeRequest) String() string {
 	source := pr.Source
 	if len(source) == 0 {
-		source = "<unset>"
+		source = DefaultSource
 	}
 
 	if len(pr.RemoteAddr) > 0 {
