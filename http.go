@@ -23,7 +23,7 @@ type PostponeHandler struct {
 func (ph PostponeHandler) ServeHTTP(response http.ResponseWriter, request *http.Request) {
 	err := request.ParseForm()
 	if err != nil {
-		response.WriteHeader(http.StatusInternalServerError)
+		response.WriteHeader(http.StatusBadRequest)
 		response.Write([]byte(err.Error()))
 		return
 	}
