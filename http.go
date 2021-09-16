@@ -73,7 +73,10 @@ func provideHTTP() fx.Option {
 							return err
 						}
 
-						logger.Printf("PUT http://%s/postpone to postpone triggering actions", l.Addr())
+						// update the server with the actual listen address
+						// this handles cases where port 0 is used to bind to the first available port
+						server.Addr = l.Addr().String()
+						logger.Printf("PUT http://%s/postpone to postpone triggering actions", server.Addr)
 
 						go func() {
 							defer s.Shutdown()
