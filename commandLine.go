@@ -1,7 +1,6 @@
 package main
 
 import (
-	"io"
 	"os"
 	"time"
 
@@ -39,7 +38,7 @@ func parseCommandLine(args []string) fx.Option {
 		if cl.Debug {
 			debug = WriterLogger{Writer: os.Stdout}
 		} else {
-			debug = WriterLogger{Writer: io.Discard}
+			debug = DiscardLogger{}
 		}
 
 		options = append(options, fx.Logger(debug), fx.Supply(cl))

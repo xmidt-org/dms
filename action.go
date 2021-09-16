@@ -10,26 +10,19 @@ import (
 )
 
 var (
+	// ErrEmptyCommand is returned by ParseExec to indicate that an exec action
+	// was blank or had a blank command path.
 	ErrEmptyCommand = errors.New("A non-empty command is required")
 )
 
+// Action represents something that will trigger unless postponed.
+// The type *os/exec.Cmd implements this interface.
 type Action interface {
 	String() string
-	Execute() error
+	Run() error
 }
 
-type CmdAction struct {
-	Cmd *exec.Cmd
-}
-
-func (ca CmdAction) String() string {
-	return ca.Cmd.String()
-}
-
-func (ca CmdAction) Execute() error {
-	return ca.Cmd.Run()
-}
-
+// ParseExec parses the executable actions from a command line.
 func ParseExec(cl CommandLine) ([]Action, error) {
 	actions := make([]Action, 0, len(cl.Exec))
 
@@ -43,14 +36,14 @@ func ParseExec(cl CommandLine) ([]Action, error) {
 		cmd.Dir = cl.Dir
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
-		actions = append(actions,
-			CmdAction{Cmd: cmd},
-		)
+		actions = append(actions, cmd)
 	}
 
 	return actions, nil
 }
 
+// ShutdownerAction allows an uber/fx.Shutdowner to be used as an Action.
+// This type is used to ensure that after trigger actions, the process exits.
 type ShutdownerAction struct {
 	Shutdowner fx.Shutdowner
 }
@@ -59,7 +52,7 @@ func (sa ShutdownerAction) String() string {
 	return "Shutdown"
 }
 
-func (sa ShutdownerAction) Execute() error {
+func (sa ShutdownerAction) Run() error {
 	return sa.Shutdowner.Shutdown()
 }
 
