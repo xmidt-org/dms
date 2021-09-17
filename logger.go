@@ -2,8 +2,10 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
+	"net/http"
 
 	"go.uber.org/fx"
 )
@@ -41,4 +43,12 @@ func provideLogger(w io.Writer) fx.Option {
 			return WriterLogger{Writer: w}
 		},
 	)
+}
+
+// logServerError logs an error if and only if err is not http.ErrServerClosed.
+// This function is intended to report any unexpected error from http.Error.Serve.
+func logServerError(l Logger, err error) {
+	if !errors.Is(err, http.ErrServerClosed) {
+		l.Printf("HTTP server error: %s", err)
+	}
 }

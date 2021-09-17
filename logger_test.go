@@ -2,7 +2,9 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"io"
+	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -58,6 +60,22 @@ func (suite *LoggerSuite) TestProvideLogger() {
 	suite.Require().NotNil(l)
 	l.Printf("test: %d", 123)
 	suite.Equal("test: 123\n", suite.capture.String())
+}
+
+func (suite *LoggerSuite) TestLogServerError() {
+	suite.Run("ErrServerClosed", func() {
+		suite.capture.Reset()
+		l := WriterLogger{Writer: suite.capture}
+		logServerError(l, http.ErrServerClosed)
+		suite.Empty(suite.capture.String())
+	})
+
+	suite.Run("UnexpectedError", func() {
+		suite.capture.Reset()
+		l := WriterLogger{Writer: suite.capture}
+		logServerError(l, errors.New("unexpected error"))
+		suite.NotEmpty(suite.capture.String())
+	})
 }
 
 func TestLogger(t *testing.T) {

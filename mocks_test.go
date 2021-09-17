@@ -8,6 +8,17 @@ import (
 	"go.uber.org/fx"
 )
 
+type mockPostponer struct {
+	mock.Mock
+}
+
+var _ Postponer = (*mockPostponer)(nil)
+
+func (m *mockPostponer) Postpone(r PostponeRequest) bool {
+	args := m.Called(r)
+	return args.Bool(0)
+}
+
 type testAction struct {
 	t *testing.T
 
