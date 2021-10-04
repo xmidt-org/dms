@@ -47,7 +47,9 @@ func (suite *PostponeHandlerSuite) testPostponed(source, remoteAddr string) {
 		response = httptest.NewRecorder()
 	)
 
-	p.On("Postpone", PostponeRequest{Source: source, RemoteAddr: remoteAddr}).Once().Return(true)
+	p.ExpectPostpone(
+		PostponeRequest{Source: source, RemoteAddr: remoteAddr},
+	).Return(true).Once()
 	ph.ServeHTTP(response, request)
 
 	result := response.Result()
@@ -82,7 +84,9 @@ func (suite *PostponeHandlerSuite) testAlreadyTriggered(source, remoteAddr strin
 		response = httptest.NewRecorder()
 	)
 
-	p.On("Postpone", PostponeRequest{Source: source, RemoteAddr: remoteAddr}).Once().Return(false)
+	p.ExpectPostpone(
+		PostponeRequest{Source: source, RemoteAddr: remoteAddr},
+	).Return(false).Once()
 	ph.ServeHTTP(response, request)
 
 	result := response.Result()
@@ -179,7 +183,7 @@ func (suite *ProvideHTTPSuite) testPostponed(cl CommandLine) {
 	suite.Require().NotNil(s)
 	suite.Require().NotEmpty(s.Addr)
 
-	p.On("Postpone", mock.MatchedBy(func(pr PostponeRequest) bool {
+	p.ExpectPostpone(mock.MatchedBy(func(pr PostponeRequest) bool {
 		suite.Empty(pr.Source)
 		suite.NotEmpty(pr.RemoteAddr)
 		return true

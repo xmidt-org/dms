@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/xmidt-org/chronon"
 	"go.uber.org/fx"
 )
 
@@ -18,9 +19,9 @@ const (
 	// when the TTL is nonpositive.
 	DefaultTTL time.Duration = 1 * time.Minute
 
-	// DefaultMisses is the number of allowed missed postpones before triggering
+	// DefaultMaxMisses is the number of allowed missed postpones before triggering
 	// actions when the misses are not supplied or are nonpositive.
-	DefaultMisses = 0
+	DefaultMaxMisses = 0
 )
 
 var (
@@ -30,13 +31,6 @@ var (
 	// ErrSwitchStopped is returned by Switch.Stop if a Switch is not running.
 	ErrSwitchStopped = errors.New("That swith has not been started")
 )
-
-type newTimer func(time.Duration) (<-chan time.Time, func() bool)
-
-func defaultNewTimer(d time.Duration) (<-chan time.Time, func() bool) {
-	t := time.NewTimer(d)
-	return t.C, t.Stop
-}
 
 // PostponeRequest carries information about a postponement to a Switch.
 type PostponeRequest struct {
@@ -65,7 +59,32 @@ func (pr PostponeRequest) String() string {
 
 // Postponer represents something that can postpone triggering actions.
 type Postponer interface {
+	// Postpone issues a request that the action trigger be delayed by
+	// at least the TTL amount.  This method returns true if the actions
+	// were postponed, false if the actions had already been triggered.
 	Postpone(PostponeRequest) bool
+}
+
+// SwitchConfig represents the set of configurable options for a Switch.
+type SwitchConfig struct {
+	// Logger is the required sink for logging output.
+	Logger Logger
+
+	// TTL is the interval on which the switch sleeps, waiting for postpones.
+	// When this interval elapses MaxMisses number of times with no postpones,
+	// the switch triggers its actions.
+	TTL time.Duration
+
+	// MaxMisses is the number of missed postpones that are allowed before
+	// actions trigger.
+	MaxMisses int
+
+	// Actions are the set of tasks to trigger when the Switch's interval
+	// elapses without being postponed.
+	Actions []Action
+
+	// Clock is the required source of time information.
+	Clock chronon.Clock
 }
 
 // Switch is a dead man's switch.  This type is associated with a slice of Actions which
@@ -77,31 +96,32 @@ type Switch struct {
 	maxMisses int
 	actions   []Action
 
-	newTimer newTimer
+	clock chronon.Clock
 
 	stateLock sync.Mutex
 	postpone  chan PostponeRequest
 	cancel    chan struct{}
 }
 
-// NewSwitch constructs a Switch.  If actions is empty, the returned Switch won't do
-// anything when triggered.
-func NewSwitch(l Logger, ttl time.Duration, maxMisses int, actions ...Action) *Switch {
-	if ttl <= 0 {
-		ttl = DefaultTTL
+// NewSwitch constructs a Switch using the given set of configuration options.
+func NewSwitch(cfg SwitchConfig) *Switch {
+	s := &Switch{
+		logger:    cfg.Logger,
+		ttl:       cfg.TTL,
+		maxMisses: cfg.MaxMisses,
+		actions:   cfg.Actions,
+		clock:     cfg.Clock,
 	}
 
-	if maxMisses < 1 {
-		maxMisses = DefaultMisses
+	if s.ttl <= 0 {
+		s.ttl = DefaultTTL
 	}
 
-	return &Switch{
-		logger:    l,
-		ttl:       ttl,
-		maxMisses: maxMisses,
-		actions:   actions,
-		newTimer:  defaultNewTimer,
+	if s.maxMisses <= 0 {
+		s.maxMisses = DefaultMaxMisses
 	}
+
+	return s
 }
 
 // cleanup handles shutdown of this switch's concurrent resources.  If the switch
@@ -123,35 +143,30 @@ func (s *Switch) cleanup() (stopped bool) {
 
 func (s *Switch) loop(postpone <-chan PostponeRequest, cancel <-chan struct{}) {
 	defer s.cleanup()
+
 	var misses int
+	t := s.clock.NewTicker(s.ttl)
+	defer t.Stop()
 
 	for {
-		timer, stop := s.newTimer(s.ttl)
 		select {
 		case pr := <-postpone:
-			stop()
+			t.Reset(s.ttl)
 			misses = 0
 
 			s.logger.Printf("postponed %s", pr)
 
 		case <-cancel:
-			stop()
 			s.logger.Printf("stopping switch loop")
 			return
 
-		case <-timer:
+		case <-t.C():
 			misses++
 			s.logger.Printf("missed postpone update [misses=%d]", misses)
 
 			if misses >= s.maxMisses {
 				s.logger.Printf("triggering actions")
-				for _, a := range s.actions {
-					s.logger.Printf("[%s]", a.String())
-					if err := a.Run(); err != nil {
-						s.logger.Printf("action error: %s", err)
-					}
-				}
-
+				Trigger(s.logger, s.actions...)
 				return
 			}
 		}
@@ -203,11 +218,30 @@ func (s *Switch) Stop(context.Context) (err error) {
 	return
 }
 
+// SwitchIn holds the set of dependencies required to create a Switch.
+type SwitchIn struct {
+	fx.In
+
+	Logger  Logger
+	Actions []Action
+	Config  SwitchConfig
+	Clock   chronon.Clock
+}
+
 func provideSwitch() fx.Option {
 	return fx.Options(
 		fx.Provide(
-			func(cl CommandLine, l Logger, actions []Action) (*Switch, Postponer) {
-				s := NewSwitch(l, cl.TTL, cl.Misses, actions...)
+			func(l Logger, cl CommandLine, clock chronon.Clock, actions []Action) SwitchConfig {
+				return SwitchConfig{
+					Logger:    l,
+					Actions:   actions,
+					TTL:       cl.TTL,
+					MaxMisses: cl.Misses,
+					Clock:     clock,
+				}
+			},
+			func(in SwitchIn) (*Switch, Postponer) {
+				s := NewSwitch(in.Config)
 				return s, s
 			},
 		),

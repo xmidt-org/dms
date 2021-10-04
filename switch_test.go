@@ -1,73 +1,62 @@
 package main
 
 import (
-	"context"
-	"errors"
-	"fmt"
-	"strconv"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/suite"
+	"github.com/xmidt-org/chronon"
+	"go.uber.org/fx"
 )
 
 type SwitchSuite struct {
 	suite.Suite
 
-	logger      Logger
-	actionLabel string
+	now    time.Time
+	logger Logger
 }
 
 var _ suite.BeforeTest = (*SwitchSuite)(nil)
+var _ suite.SetupAllSuite = (*SwitchSuite)(nil)
+
+func (suite *SwitchSuite) SetupSuite() {
+	suite.now = time.Now()
+}
 
 func (suite *SwitchSuite) BeforeTest(suiteName, testName string) {
 	suite.logger = testLogger{
 		suiteName: suiteName,
 		testName:  testName,
 	}
-
-	suite.actionLabel = fmt.Sprintf("[%s][%s]", suiteName, testName)
 }
 
-func (suite *SwitchSuite) newActions(count int) (actions []Action) {
-	for i := 0; i < count-1; i++ {
-		actions = append(
-			actions,
-			testAction{
-				t:     suite.T(),
-				label: suite.actionLabel + "." + strconv.Itoa(i),
-			},
-		)
-	}
+// actions emits the given number of mocked actions into the enclosing application.
+// Both an []Action and an []*mockAction are emitted.
+func (suite *SwitchSuite) actions(count int) fx.Option {
+	return fx.Provide(
+		func() ([]Action, []*mockAction) {
+			return NewMockActions(count)
+		},
+	)
+}
 
-	if count > 0 {
-		actions = append(
-			actions,
-			testAction{
-				t:     suite.T(),
-				label: suite.actionLabel + "." + strconv.Itoa(count-1),
-				err:   errors.New("expected error from last action"),
-			},
-		)
-	}
-
-	return
+func (suite *SwitchSuite) clock() fx.Option {
+	return fx.Provide(
+		func() (chronon.Clock, *chronon.FakeClock) {
+			fc := chronon.NewFakeClock(suite.now)
+			return fc, fc
+		},
+	)
 }
 
 func (suite *SwitchSuite) TestTrigger() {
-	actions := suite.newActions(2)
-	s := NewSwitch(suite.logger, 10*time.Minute, 0, actions...)
-
-	var timers <-chan *testTimer
-	s.newTimer, timers = newTestTimer(suite.T())
-
-	ctx := context.Background()
-	suite.Equal(ErrSwitchStopped, s.Stop(ctx))
-	assertNotCalled(actions)
-
-	suite.NoError(s.Start(ctx))
-	tt := waitForTimer(suite.T(), timers)
-	tt.c <- time.Now()
+	testCases := []CommandLine{
+		CommandLine{}, // defaults
+		CommandLine{
+			TTL:    50 * time.Minute,
+			Misses: 2,
+		},
+	}
 }
 
 func TestSwitch(t *testing.T) {
