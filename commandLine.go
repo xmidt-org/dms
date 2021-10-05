@@ -44,7 +44,6 @@ func parseCommandLine(args []string) fx.Option {
 		options = append(options,
 			fx.Logger(debug),
 			fx.Supply(cl),
-			fx.Provide(),
 		)
 	}
 

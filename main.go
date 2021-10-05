@@ -14,6 +14,7 @@ func run(args []string) error {
 		provideLogger(os.Stdout),
 		fx.Supply(chronon.SystemClock()),
 		provideActions(),
+		provideSwitchConfig(),
 		provideSwitch(),
 		provideHTTP(),
 	)

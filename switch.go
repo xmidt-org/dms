@@ -73,18 +73,51 @@ type SwitchConfig struct {
 	// TTL is the interval on which the switch sleeps, waiting for postpones.
 	// When this interval elapses MaxMisses number of times with no postpones,
 	// the switch triggers its actions.
+	//
+	// If nonpositive, DefaultTTL is used.
 	TTL time.Duration
 
 	// MaxMisses is the number of missed postpones that are allowed before
 	// actions trigger.
+	//
+	// If nonpositive, DefaultMaxMisses is used.
 	MaxMisses int
 
 	// Actions are the set of tasks to trigger when the Switch's interval
-	// elapses without being postponed.
+	// elapses without being postponed.  If this is an empty slice, then
+	// nothing happens when a switch is triggered.
 	Actions []Action
 
-	// Clock is the required source of time information.
+	// Clock is the optional source of time information.  If unset,
+	// the system clock is used.
 	Clock chronon.Clock
+}
+
+// SwitchConfigIn describes all the dependencies necessary for creating a SwitchConfig.
+type SwitchConfigIn struct {
+	fx.In
+
+	Logger      Logger
+	Actions     []Action
+	CommandLine CommandLine   `optional:"true"`
+	Clock       chronon.Clock `optional:"true"`
+}
+
+// provideSwitchConfig creates a SwitchConfig from injected components.
+// In particular, this prevents a Switch from having a tight coupling
+// to the command line.
+func provideSwitchConfig() fx.Option {
+	return fx.Provide(
+		func(in SwitchConfigIn) SwitchConfig {
+			return SwitchConfig{
+				Logger:    in.Logger,
+				TTL:       in.CommandLine.TTL,
+				MaxMisses: in.CommandLine.Misses,
+				Actions:   in.Actions,
+				Clock:     in.Clock,
+			}
+		},
+	)
 }
 
 // Switch is a dead man's switch.  This type is associated with a slice of Actions which
@@ -119,6 +152,10 @@ func NewSwitch(cfg SwitchConfig) *Switch {
 
 	if s.maxMisses <= 0 {
 		s.maxMisses = DefaultMaxMisses
+	}
+
+	if s.clock == nil {
+		s.clock = chronon.SystemClock()
 	}
 
 	return s
@@ -218,31 +255,15 @@ func (s *Switch) Stop(context.Context) (err error) {
 	return
 }
 
-// SwitchIn holds the set of dependencies required to create a Switch.
-type SwitchIn struct {
-	fx.In
-
-	Logger  Logger
-	Actions []Action
-	Config  SwitchConfig
-	Clock   chronon.Clock
-}
-
+// provideSwitch creates an fx.Option that fully bootstraps a *Switch component,
+// binding it to the fx.App lifecycle.  The only required component is a SwitchConfig,
+// typically supplied with provideSwitchConfig.
 func provideSwitch() fx.Option {
 	return fx.Options(
 		fx.Provide(
-			func(l Logger, cl CommandLine, clock chronon.Clock, actions []Action) SwitchConfig {
-				return SwitchConfig{
-					Logger:    l,
-					Actions:   actions,
-					TTL:       cl.TTL,
-					MaxMisses: cl.Misses,
-					Clock:     clock,
-				}
-			},
-			func(in SwitchIn) (*Switch, Postponer) {
-				s := NewSwitch(in.Config)
-				return s, s
+			NewSwitch,
+			func(s *Switch) Postponer {
+				return s
 			},
 		),
 		fx.Invoke(

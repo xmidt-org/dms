@@ -1,62 +1,72 @@
 package main
 
 import (
+	"context"
+	"runtime"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/suite"
-	"github.com/xmidt-org/chronon"
 	"go.uber.org/fx"
+	"go.uber.org/fx/fxtest"
 )
 
 type SwitchSuite struct {
-	suite.Suite
-
-	now    time.Time
-	logger Logger
+	DMSSuite
 }
 
-var _ suite.BeforeTest = (*SwitchSuite)(nil)
-var _ suite.SetupAllSuite = (*SwitchSuite)(nil)
+func (suite *SwitchSuite) TestCancel() {
+	suite.Run("NewSwitch", func() {
+		var (
+			actions, mockActions = NewMockActions(1)
 
-func (suite *SwitchSuite) SetupSuite() {
-	suite.now = time.Now()
-}
+			s = NewSwitch(SwitchConfig{
+				Logger:  suite.logger,
+				Actions: actions,
+				Clock:   suite.clock(),
+			})
+		)
 
-func (suite *SwitchSuite) BeforeTest(suiteName, testName string) {
-	suite.logger = testLogger{
-		suiteName: suiteName,
-		testName:  testName,
-	}
-}
+		suite.Require().NotNil(s)
+		ctx := context.Background()
 
-// actions emits the given number of mocked actions into the enclosing application.
-// Both an []Action and an []*mockAction are emitted.
-func (suite *SwitchSuite) actions(count int) fx.Option {
-	return fx.Provide(
-		func() ([]Action, []*mockAction) {
-			return NewMockActions(count)
-		},
-	)
-}
+		suite.NoError(s.Start(ctx))
+		runtime.Gosched()
+		suite.Equal(ErrSwitchStarted, s.Start(ctx))
 
-func (suite *SwitchSuite) clock() fx.Option {
-	return fx.Provide(
-		func() (chronon.Clock, *chronon.FakeClock) {
-			fc := chronon.NewFakeClock(suite.now)
-			return fc, fc
-		},
-	)
-}
+		suite.NoError(s.Stop(ctx))
+		suite.Equal(ErrSwitchStopped, s.Stop(ctx))
+		AssertActionExpectations(suite.T(), mockActions...)
+	})
 
-func (suite *SwitchSuite) TestTrigger() {
-	testCases := []CommandLine{
-		CommandLine{}, // defaults
-		CommandLine{
-			TTL:    50 * time.Minute,
-			Misses: 2,
-		},
-	}
+	suite.Run("provideSwitch", func() {
+		var (
+			actions, mockActions = NewMockActions(1)
+
+			s   *Switch
+			app = fxtest.New(
+				suite.T(),
+				fx.Supply(
+					SwitchConfig{
+						Logger:  suite.logger,
+						Actions: actions,
+						Clock:   suite.clock(),
+					},
+				),
+				provideSwitch(),
+				fx.Populate(&s),
+			)
+		)
+
+		suite.Require().NotNil(s)
+
+		app.RequireStart()
+		runtime.Gosched()
+
+		app.RequireStop()
+		runtime.Gosched()
+
+		AssertActionExpectations(suite.T(), mockActions...)
+	})
 }
 
 func TestSwitch(t *testing.T) {
