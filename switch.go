@@ -192,7 +192,7 @@ func (s *Switch) Activate() error {
 		return err
 	}
 
-	defer s.deactivate()
+	defer s.Deactivate() // ensure proper cleanup
 	var misses int
 	t := s.clock.NewTicker(s.ttl)
 	defer t.Stop()
@@ -222,10 +222,10 @@ func (s *Switch) Activate() error {
 	}
 }
 
-// deactivate performs the common tasks necessary to reset the Switch
-// back to an inactive state.  This method returns ErrNotActive
-// if this switch wasn't currently active.
-func (s *Switch) deactivate() (err error) {
+// Deactivate forces Activate to return without triggering any actions.
+// This method returns ErrNotActive if this switch is not active, which
+// includes the case where actions have already been triggered.
+func (s *Switch) Deactivate() (err error) {
 	s.stateLock.Lock()
 	defer s.stateLock.Unlock()
 
@@ -238,13 +238,6 @@ func (s *Switch) deactivate() (err error) {
 	}
 
 	return
-}
-
-// Deactivate forces Activate to return without triggering any actions.
-// This method returns ErrNotActive if this switch is not active, which
-// includes the case where actions have already been triggered.
-func (s *Switch) Deactivate() error {
-	return s.deactivate()
 }
 
 // Postpone will delay triggering actions.  The miss count will be reset,
@@ -281,13 +274,7 @@ func provideSwitch() fx.Option {
 						return nil
 					},
 					OnStop: func(context.Context) error {
-						err := s.Deactivate()
-						if errors.Is(err, ErrDeactivated) {
-							// this would be a normal condition
-							err = nil
-						}
-
-						return err
+						return s.Deactivate()
 					},
 				})
 			},
