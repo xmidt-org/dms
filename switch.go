@@ -25,11 +25,15 @@ const (
 )
 
 var (
-	// ErrSwitchStarted is returned by Switch.Start if a Switch is currently running.
-	ErrSwitchStarted = errors.New("That switch has already been started")
+	// ErrActive is returned by Switch.Activate if a Switch is currently running.
+	ErrActive = errors.New("That switch is already active")
 
-	// ErrSwitchStopped is returned by Switch.Stop if a Switch is not running.
-	ErrSwitchStopped = errors.New("That swith has not been started")
+	// ErrNotActive is returned by Switch.Cancel if a Switch is not running.
+	ErrNotActive = errors.New("That switch is not active")
+
+	// ErrDeactivated is returned by Activate if Deactivate was called before
+	// actions were triggered.
+	ErrDeactivated = errors.New("That switch has been deactivated")
 )
 
 // PostponeRequest carries information about a postponement to a Switch.
@@ -161,26 +165,34 @@ func NewSwitch(cfg SwitchConfig) *Switch {
 	return s
 }
 
-// cleanup handles shutdown of this switch's concurrent resources.  If the switch
-// was actually stopped, this method returns true.  If the switch wasn't running,
-// this method returns false.
-func (s *Switch) cleanup() (stopped bool) {
+// activate establishes the channels necessary to run this Switch.
+// If this switch is already running, and error is returned.
+func (s *Switch) activate() (postpone <-chan PostponeRequest, cancel <-chan struct{}, err error) {
 	s.stateLock.Lock()
 	defer s.stateLock.Unlock()
 
-	stopped = s.cancel != nil
-	if stopped {
-		close(s.cancel)
+	if s.cancel == nil {
+		s.postpone = make(chan PostponeRequest, 1)
+		postpone = s.postpone
+
+		s.cancel = make(chan struct{})
+		cancel = s.cancel
+	} else {
+		err = ErrActive
 	}
 
-	s.postpone = nil
-	s.cancel = nil
 	return
 }
 
-func (s *Switch) loop(postpone <-chan PostponeRequest, cancel <-chan struct{}) {
-	defer s.cleanup()
+// Activate blocks until either the actions are triggered or Deactivate is invoked.
+// If this switch is currently running, this method returns ErrActive.
+func (s *Switch) Activate() error {
+	postpone, cancel, err := s.activate()
+	if err != nil {
+		return err
+	}
 
+	defer s.deactivate()
 	var misses int
 	t := s.clock.NewTicker(s.ttl)
 	defer t.Stop()
@@ -195,7 +207,7 @@ func (s *Switch) loop(postpone <-chan PostponeRequest, cancel <-chan struct{}) {
 
 		case <-cancel:
 			s.logger.Printf("stopping switch loop")
-			return
+			return ErrDeactivated
 
 		case <-t.C():
 			misses++
@@ -204,12 +216,40 @@ func (s *Switch) loop(postpone <-chan PostponeRequest, cancel <-chan struct{}) {
 			if misses >= s.maxMisses {
 				s.logger.Printf("triggering actions")
 				Trigger(s.logger, s.actions...)
-				return
+				return nil // TODO report action errors in return value somehow
 			}
 		}
 	}
 }
 
+// deactivate performs the common tasks necessary to reset the Switch
+// back to an inactive state.  This method returns ErrNotActive
+// if this switch wasn't currently active.
+func (s *Switch) deactivate() (err error) {
+	s.stateLock.Lock()
+	defer s.stateLock.Unlock()
+
+	if s.cancel != nil {
+		close(s.cancel)
+		s.postpone = nil
+		s.cancel = nil
+	} else {
+		err = ErrNotActive
+	}
+
+	return
+}
+
+// Deactivate forces Activate to return without triggering any actions.
+// This method returns ErrNotActive if this switch is not active, which
+// includes the case where actions have already been triggered.
+func (s *Switch) Deactivate() error {
+	return s.deactivate()
+}
+
+// Postpone will delay triggering actions.  The miss count will be reset,
+// if applicable.  This method returns true to indicate that actions were
+// postponed, false if this switch was not active.
 func (s *Switch) Postpone(u PostponeRequest) (postponed bool) {
 	s.stateLock.Lock()
 	defer s.stateLock.Unlock()
@@ -217,39 +257,6 @@ func (s *Switch) Postpone(u PostponeRequest) (postponed bool) {
 	if s.postpone != nil {
 		postponed = true
 		s.postpone <- u
-	}
-
-	return
-}
-
-// Start begins waiting for postpone requests.  If no request is received in the time-to-live
-// interval, the actions will trigger.
-//
-// If the actions trigger, or if Stop is called, this method may be called again.  If this
-// switch has already been started but has not triggered its actions yet, ErrSwitchStarted is returned.
-func (s *Switch) Start(context.Context) error {
-	s.stateLock.Lock()
-	defer s.stateLock.Unlock()
-
-	if s.cancel != nil {
-		return ErrSwitchStarted
-	}
-
-	s.postpone = make(chan PostponeRequest, 1)
-	s.cancel = make(chan struct{})
-	go s.loop(s.postpone, s.cancel)
-	return nil
-}
-
-// Stop discontinues waiting for postpone requests.  The actions will not be triggered, unless
-// they were already triggered by missed postpone requests.
-//
-// If this switch wasn't running or had already triggered actions, this method returns ErrSwitchStopped.
-//
-// If this switch was running and had not triggered, this method returns nil.
-func (s *Switch) Stop(context.Context) (err error) {
-	if !s.cleanup() {
-		err = ErrSwitchStopped
 	}
 
 	return
@@ -269,8 +276,19 @@ func provideSwitch() fx.Option {
 		fx.Invoke(
 			func(l fx.Lifecycle, s *Switch) {
 				l.Append(fx.Hook{
-					OnStart: s.Start,
-					OnStop:  s.Stop,
+					OnStart: func(context.Context) error {
+						go s.Activate()
+						return nil
+					},
+					OnStop: func(context.Context) error {
+						err := s.Deactivate()
+						if errors.Is(err, ErrDeactivated) {
+							// this would be a normal condition
+							err = nil
+						}
+
+						return err
+					},
 				})
 			},
 		),

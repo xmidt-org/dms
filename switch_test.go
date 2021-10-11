@@ -1,72 +1,68 @@
 package main
 
 import (
-	"context"
-	"runtime"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
-	"go.uber.org/fx"
-	"go.uber.org/fx/fxtest"
+	"github.com/xmidt-org/chronon"
 )
 
 type SwitchSuite struct {
 	DMSSuite
 }
 
-func (suite *SwitchSuite) TestCancel() {
+func (suite *SwitchSuite) testCancelBeforeTrigger(actionCount int) {
 	suite.Run("NewSwitch", func() {
 		var (
-			actions, mockActions = NewMockActions(1)
-
-			s = NewSwitch(SwitchConfig{
-				Logger:  suite.logger,
-				Actions: actions,
-				Clock:   suite.clock(),
-			})
+			actions, mockActions = NewMockActions(actionCount)
+			cfg, clock           = suite.switchConfig(0, 0, actions...)
+			s                    = suite.newSwitch(cfg)
+			done                 = make(chan error)
+			onTicker             = make(chan chronon.FakeTicker, 1)
 		)
 
-		suite.Require().NotNil(s)
-		ctx := context.Background()
+		clock.NotifyOnTicker(onTicker)
+		go func() {
+			done <- s.Activate()
+		}()
 
-		suite.NoError(s.Start(ctx))
-		runtime.Gosched()
-		suite.Equal(ErrSwitchStarted, s.Start(ctx))
-
-		suite.NoError(s.Stop(ctx))
-		suite.Equal(ErrSwitchStopped, s.Stop(ctx))
-		AssertActionExpectations(suite.T(), mockActions...)
+		<-onTicker
+		suite.Equal(ErrActive, s.Activate()) // idempotent
+		suite.NoError(s.Deactivate())
+		suite.Equal(ErrDeactivated, <-done)
+		suite.assertActionExpectations(mockActions...)
 	})
 
 	suite.Run("provideSwitch", func() {
 		var (
-			actions, mockActions = NewMockActions(1)
-
-			s   *Switch
-			app = fxtest.New(
-				suite.T(),
-				fx.Supply(
-					SwitchConfig{
-						Logger:  suite.logger,
-						Actions: actions,
-						Clock:   suite.clock(),
-					},
-				),
-				provideSwitch(),
-				fx.Populate(&s),
-			)
+			actions, mockActions = NewMockActions(actionCount)
+			cfg, clock           = suite.switchConfig(0, 0, actions...)
+			s                    *Switch
+			p                    Postponer
+			app                  = suite.provideSwitch(cfg, &s, &p)
+			onTicker             = make(chan chronon.FakeTicker, 1)
 		)
 
 		suite.Require().NotNil(s)
-
+		suite.Require().NotNil(p)
+		clock.NotifyOnTicker(onTicker)
 		app.RequireStart()
-		runtime.Gosched()
+
+		<-onTicker
+		suite.Equal(ErrActive, s.Activate()) // idempotent
 
 		app.RequireStop()
-		runtime.Gosched()
-
-		AssertActionExpectations(suite.T(), mockActions...)
+		suite.assertActionExpectations(mockActions...)
 	})
+}
+
+func (suite *SwitchSuite) TestCancelBeforeTrigger() {
+	for _, actionCount := range []int{0, 1, 2, 5} {
+		suite.Run(fmt.Sprintf("actionCount=%d", actionCount), func() {
+			suite.testCancelBeforeTrigger(actionCount)
+		})
+	}
 }
 
 func TestSwitch(t *testing.T) {

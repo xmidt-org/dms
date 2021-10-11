@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/xmidt-org/chronon"
 	"go.uber.org/fx"
+	"go.uber.org/fx/fxtest"
 )
 
 // DMSSuite hosts common infrastructure for dms unit test suites.
@@ -34,19 +35,47 @@ func (suite *DMSSuite) clock() *chronon.FakeClock {
 	return chronon.NewFakeClock(suite.now)
 }
 
-func (suite *DMSSuite) provideClock() fx.Option {
-	return fx.Provide(
-		suite.clock,
-		func(fc *chronon.FakeClock) chronon.Clock {
-			return fc
-		},
-	)
+func (suite *DMSSuite) actions(count int) ([]Action, []*mockAction) {
+	return NewMockActions(count)
 }
 
-func (suite *SwitchSuite) provideActions(count int) fx.Option {
-	return fx.Provide(
-		func() ([]Action, []*mockAction) {
-			return NewMockActions(count)
-		},
+func (suite *DMSSuite) assertActionExpectations(ma ...*mockAction) {
+	for _, a := range ma {
+		a.AssertExpectations(suite.T())
+	}
+}
+
+// switchConfig returns a SwitchConfig built with this suite's current state.
+// A fake clock is used to control any ticker loops started by tests.
+func (suite *DMSSuite) switchConfig(ttl time.Duration, maxMisses int, actions ...Action) (SwitchConfig, *chronon.FakeClock) {
+	clock := suite.clock()
+	cfg := SwitchConfig{
+		Logger:    suite.logger,
+		TTL:       ttl,
+		MaxMisses: maxMisses,
+		Actions:   actions,
+		Clock:     clock,
+	}
+
+	return cfg, clock
+}
+
+// newSwitch uses NewSwitch to directly construct a Switch.
+func (suite *DMSSuite) newSwitch(cfg SwitchConfig) *Switch {
+	s := NewSwitch(cfg)
+	suite.Require().NotNil(s)
+	return s
+}
+
+// provideSwitch uses an enclosing fx.App to create a Switch.
+func (suite *DMSSuite) provideSwitch(cfg SwitchConfig, populate ...interface{}) *fxtest.App {
+	app := fxtest.New(
+		suite.T(),
+		fx.Supply(cfg),
+		provideSwitch(),
+		fx.Populate(populate...),
 	)
+
+	suite.Require().NoError(app.Err())
+	return app
 }
