@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/xmidt-org/chronon"
 	"go.uber.org/fx"
 )
 
@@ -12,7 +11,6 @@ func run(args []string) error {
 	app := fx.New(
 		parseCommandLine(args),
 		provideLogger(os.Stdout),
-		fx.Supply(chronon.SystemClock()),
 		provideActions(),
 		provideSwitchConfig(),
 		provideSwitch(),
