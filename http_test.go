@@ -9,7 +9,6 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
@@ -19,7 +18,7 @@ import (
 )
 
 type PostponeHandlerSuite struct {
-	suite.Suite
+	DMSSuite
 }
 
 func (suite *PostponeHandlerSuite) newRequest(source, remoteAddr string, body io.Reader) *http.Request {
@@ -138,14 +137,14 @@ func TestPostponeHandler(t *testing.T) {
 }
 
 type ProvideHTTPSuite struct {
-	suite.Suite
+	DMSSuite
 }
 
 // newApp creates an *fx.App for tests where the container startup should fail
 func (suite *ProvideHTTPSuite) newBadApp(cl CommandLine, p Postponer) {
 	app := fx.New(
 		fx.Logger(DiscardLogger{}),
-		provideLogger(os.Stdout),
+		suite.provideLogger(),
 		fx.Supply(cl, p),
 		provideHTTP(),
 		fx.Provide(
@@ -162,7 +161,7 @@ func (suite *ProvideHTTPSuite) newTestApp(cl CommandLine, p Postponer, s **http.
 	return fxtest.New(
 		suite.T(),
 		fx.Logger(DiscardLogger{}),
-		provideLogger(os.Stdout),
+		suite.provideLogger(),
 		fx.Supply(cl, p),
 		provideHTTP(),
 		fx.Provide(

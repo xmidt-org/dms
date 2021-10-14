@@ -3,10 +3,8 @@ package main
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -15,25 +13,20 @@ import (
 )
 
 type testLogger struct {
+	t *testing.T
+
 	suiteName string
 	testName  string
 }
 
 func (tl testLogger) Printf(format string, args ...interface{}) {
-	args = append(
-		[]interface{}{tl.suiteName, tl.testName},
-		args...,
-	)
-
-	_, err := fmt.Fprintf(
-		os.Stdout,
+	tl.t.Logf(
 		"[%s] [%s] "+format+"\n",
-		args...,
+		append(
+			[]interface{}{tl.suiteName, tl.testName},
+			args...,
+		)...,
 	)
-
-	if err != nil {
-		panic(err)
-	}
 }
 
 type LoggerSuite struct {
