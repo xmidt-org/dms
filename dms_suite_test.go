@@ -31,18 +31,16 @@ func (suite *DMSSuite) BeforeTest(suiteName, testName string) {
 	}
 }
 
+func (suite *DMSSuite) provideLogger() fx.Option {
+	return fx.Provide(
+		func() Logger {
+			return suite.logger
+		},
+	)
+}
+
 func (suite *DMSSuite) clock() *chronon.FakeClock {
 	return chronon.NewFakeClock(suite.now)
-}
-
-func (suite *DMSSuite) actions(count int) ([]Action, []*mockAction) {
-	return NewMockActions(count)
-}
-
-func (suite *DMSSuite) assertActionExpectations(ma ...*mockAction) {
-	for _, a := range ma {
-		a.AssertExpectations(suite.T())
-	}
 }
 
 // switchConfig returns a SwitchConfig built with this suite's current state.

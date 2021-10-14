@@ -29,6 +29,8 @@ github.com/xmidt-org/chronon v0.0.2 h1:49ke5lVyigj7NXWhjRZRrgCN1BRzH+VwKE05FTAzc
 github.com/xmidt-org/chronon v0.0.2/go.mod h1:sNTxtzw8HmyOalSSJ3Y9/N0+NtbwjXctcmXVTCsPiHY=
 github.com/xmidt-org/chronon v0.1.0 h1:+a9GPh6OF9PU6sN4eUWsuDUPvAKdcVELf3DdDa/AjiU=
 github.com/xmidt-org/chronon v0.1.0/go.mod h1:8VF1skJAouQihpKfXE8oZZkbQpV1TSR/7QltNxq8T4k=
+github.com/xmidt-org/chronon v0.1.1 h1:SzOYkT/nmps3jH4sWu6A52ToKvv5Bu0Gb45/ec5Ty9U=
+github.com/xmidt-org/chronon v0.1.1/go.mod h1:8VF1skJAouQihpKfXE8oZZkbQpV1TSR/7QltNxq8T4k=
 github.com/yuin/goldmark v1.3.5/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1Zlc8k=
 go.uber.org/atomic v1.5.0/go.mod h1:sABNBOSYdrvTF6hTgEIbc7YasKWGhgEQZyfxyTvoXHQ=
 go.uber.org/atomic v1.7.0/go.mod h1:fEN4uk6kAWBTFdckzkM89CLk9XfWZrxpCo0nPH17wJc=

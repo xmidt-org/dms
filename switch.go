@@ -124,6 +124,14 @@ func provideSwitchConfig() fx.Option {
 	)
 }
 
+// monitor holds the various concurrency primitives used by the Activate loop.
+type monitor struct {
+	postpone   <-chan PostponeRequest
+	deactivate <-chan struct{}
+	exit       chan<- struct{}
+	actions    []Action
+}
+
 // Switch is a dead man's switch.  This type is associated with a slice of Actions which
 // will be executed unless postponed within a certain time-to-live interval.
 type Switch struct {
@@ -135,9 +143,10 @@ type Switch struct {
 
 	clock chronon.Clock
 
-	stateLock sync.Mutex
-	postpone  chan PostponeRequest
-	cancel    chan struct{}
+	stateLock  sync.Mutex
+	postpone   chan<- PostponeRequest
+	deactivate chan<- struct{}
+	exit       <-chan struct{}
 }
 
 // NewSwitch constructs a Switch using the given set of configuration options.
@@ -165,18 +174,23 @@ func NewSwitch(cfg SwitchConfig) *Switch {
 	return s
 }
 
-// activate establishes the channels necessary to run this Switch.
-// If this switch is already running, and error is returned.
-func (s *Switch) activate() (postpone <-chan PostponeRequest, cancel <-chan struct{}, err error) {
+// initialize establishes the channels necessary to run this Switch.
+// If this switch is already running, an error is returned.
+func (s *Switch) initialize() (m monitor, err error) {
 	s.stateLock.Lock()
 	defer s.stateLock.Unlock()
 
-	if s.cancel == nil {
-		s.postpone = make(chan PostponeRequest, 1)
-		postpone = s.postpone
+	if s.deactivate == nil {
+		m.actions = s.actions
 
-		s.cancel = make(chan struct{})
-		cancel = s.cancel
+		postpone := make(chan PostponeRequest, 1)
+		s.postpone, m.postpone = postpone, postpone
+
+		deactivate := make(chan struct{})
+		s.deactivate, m.deactivate = deactivate, deactivate
+
+		exit := make(chan struct{})
+		s.exit, m.exit = exit, exit
 	} else {
 		err = ErrActive
 	}
@@ -184,29 +198,59 @@ func (s *Switch) activate() (postpone <-chan PostponeRequest, cancel <-chan stru
 	return
 }
 
+// terminate handles the common logic to shutdown this Switch.
+// When called with one or more actions, those actions are executed
+// under this switch's state lock.
+//
+// This method returns the exit channel that will be signaled when Activate
+// actually exits.  The returned channel will be nil if this switch was
+// not active.
+//
+// This method is passed the actions to trigger, rather than using the
+// Switch's actions.  This allows code to terminate without triggering
+// actions, such as in Deactivate.
+func (s *Switch) terminate(actions ...Action) (exit <-chan struct{}) {
+	s.stateLock.Lock()
+	defer s.stateLock.Unlock()
+
+	if s.deactivate != nil {
+		close(s.deactivate)
+		s.postpone = nil
+		s.deactivate = nil
+
+		exit, s.exit = s.exit, nil
+
+		// trigger actions under the state lock, to make Activate/Deactivate atomic
+		Trigger(s.logger, actions...)
+	}
+
+	return
+}
+
 // Activate blocks until either the actions are triggered or Deactivate is invoked.
-// If this switch is currently running, this method returns ErrActive.
+// If this switch is already active, this method returns ErrActive.
 func (s *Switch) Activate() error {
-	postpone, cancel, err := s.activate()
+	m, err := s.initialize()
 	if err != nil {
 		return err
 	}
 
-	defer s.Deactivate() // ensure proper cleanup
+	defer close(m.exit)
+
 	var misses int
 	t := s.clock.NewTicker(s.ttl)
 	defer t.Stop()
 
 	for {
 		select {
-		case pr := <-postpone:
+		case pr := <-m.postpone:
 			t.Reset(s.ttl)
 			misses = 0
 
 			s.logger.Printf("postponed %s", pr)
 
-		case <-cancel:
-			s.logger.Printf("stopping switch loop")
+		case <-m.deactivate:
+			s.logger.Printf("deactivated")
 			return ErrDeactivated
 
 		case <-t.C():
@@ -214,9 +258,11 @@ func (s *Switch) Activate() error {
 			s.logger.Printf("missed postpone update [misses=%d]", misses)
 
 			if misses >= s.maxMisses {
-				s.logger.Printf("triggering actions")
-				Trigger(s.logger, s.actions...)
-				return nil // TODO report action errors in return value somehow
+				if s.terminate(m.actions...) == nil {
+					return ErrDeactivated
+				}
+
+				return nil
 			}
 		}
 	}
@@ -225,14 +271,11 @@ func (s *Switch) Activate() error {
 // Deactivate forces Activate to return without triggering any actions.
 // This method returns ErrNotActive if this switch is not active, which
 // includes the case where actions have already been triggered.
+//
+// This method blocks until the most recent invocation of Activate exits.
 func (s *Switch) Deactivate() (err error) {
-	s.stateLock.Lock()
-	defer s.stateLock.Unlock()
-
-	if s.cancel != nil {
-		close(s.cancel)
-		s.postpone = nil
-		s.cancel = nil
+	if exit := s.terminate(); exit != nil {
+		<-exit
 	} else {
 		err = ErrNotActive
 	}
@@ -273,8 +316,14 @@ func provideSwitch() fx.Option {
 						go s.Activate()
 						return nil
 					},
-					OnStop: func(context.Context) error {
-						return s.Deactivate()
+					OnStop: func(context.Context) (err error) {
+						if err = s.Deactivate(); errors.Is(err, ErrNotActive) {
+							// it's ok if something in the app deactivated the switch
+							// or if the switch triggered it's actions
+							err = nil
+						}
+
+						return
 					},
 				})
 			},
