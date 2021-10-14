@@ -9,7 +9,7 @@ import (
 )
 
 type CommandLineSuite struct {
-	suite.Suite
+	DMSSuite
 }
 
 func (suite *CommandLineSuite) TestError() {
@@ -39,6 +39,7 @@ func (suite *CommandLineSuite) TestTypical() {
 func (suite *CommandLineSuite) TestDebug() {
 	app := fxtest.New(
 		suite.T(),
+		fx.Logger(DiscardLogger{}),
 		parseCommandLine([]string{
 			"--http", ":8080",
 			"--ttl", "10s",

@@ -26,6 +26,7 @@ func (suite *DMSSuite) SetupSuite() {
 
 func (suite *DMSSuite) BeforeTest(suiteName, testName string) {
 	suite.logger = testLogger{
+		t:         suite.T(),
 		suiteName: suiteName,
 		testName:  testName,
 	}
