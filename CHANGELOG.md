@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 - Refactored Switch into a simpler interface that removes internal concurrency
+- Ensure that as much as possible test logging goes through testing.T
 
 ## [v0.1.0]
 - README text
