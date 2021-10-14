@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/xmidt-org/chronon"
 	"go.uber.org/fx"
 )
 
@@ -18,25 +19,22 @@ const (
 	// when the TTL is nonpositive.
 	DefaultTTL time.Duration = 1 * time.Minute
 
-	// DefaultMisses is the number of allowed missed postpones before triggering
+	// DefaultMaxMisses is the number of allowed missed postpones before triggering
 	// actions when the misses are not supplied or are nonpositive.
-	DefaultMisses = 0
+	DefaultMaxMisses = 0
 )
 
 var (
-	// ErrSwitchStarted is returned by Switch.Start if a Switch is currently running.
-	ErrSwitchStarted = errors.New("That switch has already been started")
+	// ErrActive is returned by Switch.Activate if a Switch is currently running.
+	ErrActive = errors.New("That switch is already active")
 
-	// ErrSwitchStopped is returned by Switch.Stop if a Switch is not running.
-	ErrSwitchStopped = errors.New("That swith has not been started")
+	// ErrNotActive is returned by Switch.Cancel if a Switch is not running.
+	ErrNotActive = errors.New("That switch is not active")
+
+	// ErrDeactivated is returned by Activate if Deactivate was called before
+	// actions were triggered.
+	ErrDeactivated = errors.New("That switch has been deactivated")
 )
-
-type newTimer func(time.Duration) (<-chan time.Time, func() bool)
-
-func defaultNewTimer(d time.Duration) (<-chan time.Time, func() bool) {
-	t := time.NewTimer(d)
-	return t.C, t.Stop
-}
 
 // PostponeRequest carries information about a postponement to a Switch.
 type PostponeRequest struct {
@@ -65,7 +63,73 @@ func (pr PostponeRequest) String() string {
 
 // Postponer represents something that can postpone triggering actions.
 type Postponer interface {
+	// Postpone issues a request that the action trigger be delayed by
+	// at least the TTL amount.  This method returns true if the actions
+	// were postponed, false if the actions had already been triggered.
 	Postpone(PostponeRequest) bool
+}
+
+// SwitchConfig represents the set of configurable options for a Switch.
+type SwitchConfig struct {
+	// Logger is the required sink for logging output.
+	Logger Logger
+
+	// TTL is the interval on which the switch sleeps, waiting for postpones.
+	// When this interval elapses MaxMisses number of times with no postpones,
+	// the switch triggers its actions.
+	//
+	// If nonpositive, DefaultTTL is used.
+	TTL time.Duration
+
+	// MaxMisses is the number of missed postpones that are allowed before
+	// actions trigger.
+	//
+	// If nonpositive, DefaultMaxMisses is used.
+	MaxMisses int
+
+	// Actions are the set of tasks to trigger when the Switch's interval
+	// elapses without being postponed.  If this is an empty slice, then
+	// nothing happens when a switch is triggered.
+	Actions []Action
+
+	// Clock is the optional source of time information.  If unset,
+	// the system clock is used.
+	Clock chronon.Clock
+}
+
+// SwitchConfigIn describes all the dependencies necessary for creating a SwitchConfig.
+type SwitchConfigIn struct {
+	fx.In
+
+	Logger      Logger
+	Actions     []Action
+	CommandLine CommandLine   `optional:"true"`
+	Clock       chronon.Clock `optional:"true"`
+}
+
+// provideSwitchConfig creates a SwitchConfig from injected components.
+// In particular, this prevents a Switch from having a tight coupling
+// to the command line.
+func provideSwitchConfig() fx.Option {
+	return fx.Provide(
+		func(in SwitchConfigIn) SwitchConfig {
+			return SwitchConfig{
+				Logger:    in.Logger,
+				TTL:       in.CommandLine.TTL,
+				MaxMisses: in.CommandLine.Misses,
+				Actions:   in.Actions,
+				Clock:     in.Clock,
+			}
+		},
+	)
+}
+
+// monitor holds the various concurrency primitives used by the Activate loop.
+type monitor struct {
+	postpone   <-chan PostponeRequest
+	deactivate <-chan struct{}
+	exit       chan<- struct{}
+	actions    []Action
 }
 
 // Switch is a dead man's switch.  This type is associated with a slice of Actions which
@@ -77,87 +141,151 @@ type Switch struct {
 	maxMisses int
 	actions   []Action
 
-	newTimer newTimer
+	clock chronon.Clock
 
-	stateLock sync.Mutex
-	postpone  chan PostponeRequest
-	cancel    chan struct{}
+	stateLock  sync.Mutex
+	postpone   chan<- PostponeRequest
+	deactivate chan<- struct{}
+	exit       <-chan struct{}
 }
 
-// NewSwitch constructs a Switch.  If actions is empty, the returned Switch won't do
-// anything when triggered.
-func NewSwitch(l Logger, ttl time.Duration, maxMisses int, actions ...Action) *Switch {
-	if ttl <= 0 {
-		ttl = DefaultTTL
+// NewSwitch constructs a Switch using the given set of configuration options.
+func NewSwitch(cfg SwitchConfig) *Switch {
+	s := &Switch{
+		logger:    cfg.Logger,
+		ttl:       cfg.TTL,
+		maxMisses: cfg.MaxMisses,
+		actions:   cfg.Actions,
+		clock:     cfg.Clock,
 	}
 
-	if maxMisses < 1 {
-		maxMisses = DefaultMisses
+	if s.ttl <= 0 {
+		s.ttl = DefaultTTL
 	}
 
-	return &Switch{
-		logger:    l,
-		ttl:       ttl,
-		maxMisses: maxMisses,
-		actions:   actions,
-		newTimer:  defaultNewTimer,
+	if s.maxMisses <= 0 {
+		s.maxMisses = DefaultMaxMisses
 	}
+
+	if s.clock == nil {
+		s.clock = chronon.SystemClock()
+	}
+
+	return s
 }
 
-// cleanup handles shutdown of this switch's concurrent resources.  If the switch
-// was actually stopped, this method returns true.  If the switch wasn't running,
-// this method returns false.
-func (s *Switch) cleanup() (stopped bool) {
+// initialize establishes the channels necessary to run this Switch.
+// If this switch is already running, an error is returned.
+func (s *Switch) initialize() (m monitor, err error) {
 	s.stateLock.Lock()
 	defer s.stateLock.Unlock()
 
-	stopped = s.cancel != nil
-	if stopped {
-		close(s.cancel)
+	if s.deactivate == nil {
+		m.actions = s.actions
+
+		postpone := make(chan PostponeRequest, 1)
+		s.postpone, m.postpone = postpone, postpone
+
+		deactivate := make(chan struct{})
+		s.deactivate, m.deactivate = deactivate, deactivate
+
+		exit := make(chan struct{})
+		s.exit, m.exit = exit, exit
+	} else {
+		err = ErrActive
 	}
 
-	s.postpone = nil
-	s.cancel = nil
 	return
 }
 
-func (s *Switch) loop(postpone <-chan PostponeRequest, cancel <-chan struct{}) {
-	defer s.cleanup()
+// terminate handles the common logic to shutdown this Switch.
+// When called with one or more actions, those actions are executed
+// under this switch's state lock.
+//
+// This method returns the exit channel that will be signaled when Activate
+// actually exits.  The returned channel will be nil if this switch was
+// not active.
+//
+// This method is passed the actions to trigger, rather than using the
+// Switch's actions.  This allows code to terminate without triggering
+// actions, such as in Deactivate.
+func (s *Switch) terminate(actions ...Action) (exit <-chan struct{}) {
+	s.stateLock.Lock()
+	defer s.stateLock.Unlock()
+
+	if s.deactivate != nil {
+		close(s.deactivate)
+		s.postpone = nil
+		s.deactivate = nil
+
+		exit, s.exit = s.exit, nil
+
+		// trigger actions under the state lock, to make Activate/Deactivate atomic
+		Trigger(s.logger, actions...)
+	}
+
+	return
+}
+
+// Activate blocks until either the actions are triggered or Deactivate is invoked.
+// If this switch is already active, this method returns ErrActive.
+func (s *Switch) Activate() error {
+	m, err := s.initialize()
+	if err != nil {
+		return err
+	}
+
+	defer close(m.exit)
+
 	var misses int
+	t := s.clock.NewTicker(s.ttl)
+	defer t.Stop()
 
 	for {
-		timer, stop := s.newTimer(s.ttl)
 		select {
-		case pr := <-postpone:
-			stop()
+		case pr := <-m.postpone:
+			t.Reset(s.ttl)
 			misses = 0
 
 			s.logger.Printf("postponed %s", pr)
 
-		case <-cancel:
-			stop()
-			s.logger.Printf("stopping switch loop")
-			return
+		case <-m.deactivate:
+			s.logger.Printf("deactivated")
+			return ErrDeactivated
 
-		case <-timer:
+		case <-t.C():
 			misses++
 			s.logger.Printf("missed postpone update [misses=%d]", misses)
 
 			if misses >= s.maxMisses {
-				s.logger.Printf("triggering actions")
-				for _, a := range s.actions {
-					s.logger.Printf("[%s]", a.String())
-					if err := a.Run(); err != nil {
-						s.logger.Printf("action error: %s", err)
-					}
+				if s.terminate(m.actions...) == nil {
+					return ErrDeactivated
 				}
 
-				return
+				return nil
 			}
 		}
 	}
 }
 
+// Deactivate forces Activate to return without triggering any actions.
+// This method returns ErrNotActive if this switch is not active, which
+// includes the case where actions have already been triggered.
+//
+// This method blocks until the most recent invocation of Activate exits.
+func (s *Switch) Deactivate() (err error) {
+	if exit := s.terminate(); exit != nil {
+		<-exit
+	} else {
+		err = ErrNotActive
+	}
+
+	return
+}
+
+// Postpone will delay triggering actions.  The miss count will be reset,
+// if applicable.  This method returns true to indicate that actions were
+// postponed, false if this switch was not active.
 func (s *Switch) Postpone(u PostponeRequest) (postponed bool) {
 	s.stateLock.Lock()
 	defer s.stateLock.Unlock()
@@ -170,52 +298,33 @@ func (s *Switch) Postpone(u PostponeRequest) (postponed bool) {
 	return
 }
 
-// Start begins waiting for postpone requests.  If no request is received in the time-to-live
-// interval, the actions will trigger.
-//
-// If the actions trigger, or if Stop is called, this method may be called again.  If this
-// switch has already been started but has not triggered its actions yet, ErrSwitchStarted is returned.
-func (s *Switch) Start(context.Context) error {
-	s.stateLock.Lock()
-	defer s.stateLock.Unlock()
-
-	if s.cancel != nil {
-		return ErrSwitchStarted
-	}
-
-	s.postpone = make(chan PostponeRequest, 1)
-	s.cancel = make(chan struct{})
-	go s.loop(s.postpone, s.cancel)
-	return nil
-}
-
-// Stop discontinues waiting for postpone requests.  The actions will not be triggered, unless
-// they were already triggered by missed postpone requests.
-//
-// If this switch wasn't running or had already triggered actions, this method returns ErrSwitchStopped.
-//
-// If this switch was running and had not triggered, this method returns nil.
-func (s *Switch) Stop(context.Context) (err error) {
-	if !s.cleanup() {
-		err = ErrSwitchStopped
-	}
-
-	return
-}
-
+// provideSwitch creates an fx.Option that fully bootstraps a *Switch component,
+// binding it to the fx.App lifecycle.  The only required component is a SwitchConfig,
+// typically supplied with provideSwitchConfig.
 func provideSwitch() fx.Option {
 	return fx.Options(
 		fx.Provide(
-			func(cl CommandLine, l Logger, actions []Action) (*Switch, Postponer) {
-				s := NewSwitch(l, cl.TTL, cl.Misses, actions...)
-				return s, s
+			NewSwitch,
+			func(s *Switch) Postponer {
+				return s
 			},
 		),
 		fx.Invoke(
 			func(l fx.Lifecycle, s *Switch) {
 				l.Append(fx.Hook{
-					OnStart: s.Start,
-					OnStop:  s.Stop,
+					OnStart: func(context.Context) error {
+						go s.Activate()
+						return nil
+					},
+					OnStop: func(context.Context) (err error) {
+						if err = s.Deactivate(); errors.Is(err, ErrNotActive) {
+							// it's ok if something in the app deactivated the switch
+							// or if the switch triggered it's actions
+							err = nil
+						}
+
+						return
+					},
 				})
 			},
 		),

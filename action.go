@@ -22,6 +22,17 @@ type Action interface {
 	Run() error
 }
 
+// Trigger executes each action in sequence, providing a standard output
+// format for each action.
+func Trigger(l Logger, actions ...Action) {
+	for _, a := range actions {
+		l.Printf("[%s]", a.String())
+		if err := a.Run(); err != nil {
+			l.Printf("action error: %s", err)
+		}
+	}
+}
+
 // ParseExec parses the executable actions from a command line.
 func ParseExec(cl CommandLine) ([]Action, error) {
 	actions := make([]Action, 0, len(cl.Exec))
@@ -49,7 +60,7 @@ type ShutdownerAction struct {
 }
 
 func (sa ShutdownerAction) String() string {
-	return "Shutdown"
+	return "Shutdowner"
 }
 
 func (sa ShutdownerAction) Run() error {

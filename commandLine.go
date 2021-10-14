@@ -41,7 +41,10 @@ func parseCommandLine(args []string) fx.Option {
 			debug = DiscardLogger{}
 		}
 
-		options = append(options, fx.Logger(debug), fx.Supply(cl))
+		options = append(options,
+			fx.Logger(debug),
+			fx.Supply(cl),
+		)
 	}
 
 	if err != nil {

@@ -3,14 +3,38 @@ package main
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxtest"
 )
+
+type testLogger struct {
+	suiteName string
+	testName  string
+}
+
+func (tl testLogger) Printf(format string, args ...interface{}) {
+	args = append(
+		[]interface{}{tl.suiteName, tl.testName},
+		args...,
+	)
+
+	_, err := fmt.Fprintf(
+		os.Stdout,
+		"[%s] [%s] "+format+"\n",
+		args...,
+	)
+
+	if err != nil {
+		panic(err)
+	}
+}
 
 type LoggerSuite struct {
 	suite.Suite
