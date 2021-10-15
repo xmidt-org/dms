@@ -7,8 +7,8 @@ import (
 	"go.uber.org/fx"
 )
 
-func run(args []string) error {
-	app := fx.New(
+func newApp(args []string) *fx.App {
+	return fx.New(
 		parseCommandLine(args),
 		provideLogger(os.Stdout),
 		provideActions(),
@@ -16,15 +16,13 @@ func run(args []string) error {
 		provideSwitch(),
 		provideHTTP(),
 	)
-
-	app.Run()
-	return app.Err()
 }
 
 func main() {
-	err := run(os.Args[1:])
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", err)
+	app := newApp(os.Args[1:])
+	app.Run()
+	if app.Err() != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", app.Err())
 		os.Exit(1)
 	}
 }
