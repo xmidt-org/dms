@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -54,7 +53,7 @@ func (suite *PostponeHandlerSuite) testPostponed(source, remoteAddr string) {
 	result := response.Result()
 	suite.Equal(http.StatusOK, result.StatusCode)
 
-	body, err := ioutil.ReadAll(result.Body)
+	body, err := io.ReadAll(result.Body)
 	suite.NoError(err)
 	suite.Empty(string(body)) // string errors are easier to debug
 
@@ -91,7 +90,7 @@ func (suite *PostponeHandlerSuite) testAlreadyTriggered(source, remoteAddr strin
 	result := response.Result()
 	suite.Equal(http.StatusServiceUnavailable, result.StatusCode)
 
-	body, err := ioutil.ReadAll(result.Body)
+	body, err := io.ReadAll(result.Body)
 	suite.NoError(err)
 	suite.Empty(string(body)) // string errors are easier to debug
 
@@ -125,7 +124,7 @@ func (suite *PostponeHandlerSuite) TestParseFormError() {
 	result := response.Result()
 	suite.Equal(http.StatusBadRequest, result.StatusCode)
 
-	body, err := ioutil.ReadAll(result.Body)
+	body, err := io.ReadAll(result.Body)
 	suite.NoError(err)
 	suite.NotEmpty(string(body)) // string errors are easier to debug
 
@@ -198,7 +197,7 @@ func (suite *ProvideHTTPSuite) testPostponed(cl CommandLine) {
 	defer response.Body.Close()
 	suite.Equal(http.StatusOK, response.StatusCode)
 
-	body, err := ioutil.ReadAll(response.Body)
+	body, err := io.ReadAll(response.Body)
 	suite.Require().NoError(err)
 	suite.Empty(string(body))
 
