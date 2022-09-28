@@ -3,7 +3,6 @@
 dms is a command-line dead man's switch that will trigger one or more actions unless postponed.
 
 [![Build Status](https://github.com/xmidt-org/dms/actions/workflows/ci.yml/badge.svg)](https://github.com/xmidt-org/dms/actions/workflows/ci.yml)
-[![Dependency Updateer](https://github.com/xmidt-org/dms/actions/workflows/updater.yml/badge.svg)](https://github.com/xmidt-org/dms/actions/workflows/updater.yml)
 [![codecov.io](http://codecov.io/github/xmidt-org/dms/coverage.svg?branch=main)](http://codecov.io/github/xmidt-org/dms?branch=main)
 [![Go Report Card](https://goreportcard.com/badge/github.com/xmidt-org/dms)](https://goreportcard.com/report/github.com/xmidt-org/dms)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=xmidt-org_dms&metric=alert_status)](https://sonarcloud.io/dashboard?id=xmidt-org_dms)
