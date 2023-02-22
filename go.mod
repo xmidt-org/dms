@@ -9,8 +9,8 @@ require (
 	github.com/stretchr/testify v1.8.1
 	github.com/xmidt-org/chronon v0.1.1
 	go.uber.org/atomic v1.10.0 // indirect
-	go.uber.org/dig v1.16.0 // indirect
-	go.uber.org/fx v1.19.1
+	go.uber.org/dig v1.16.1 // indirect
+	go.uber.org/fx v1.19.2
 	go.uber.org/multierr v1.8.0 // indirect
 )
 
