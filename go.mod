@@ -10,7 +10,7 @@ require (
 	github.com/xmidt-org/chronon v0.1.1
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/dig v1.17.0 // indirect
-	go.uber.org/fx v1.20.0
+	go.uber.org/fx v1.20.1
 	go.uber.org/multierr v1.8.0 // indirect
 )
 
