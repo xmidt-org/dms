@@ -9,7 +9,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/xmidt-org/chronon v0.1.1
 	go.uber.org/dig v1.17.1 // indirect
-	go.uber.org/fx v1.21.1
+	go.uber.org/fx v1.22.0
 	go.uber.org/multierr v1.10.0 // indirect
 )
 
