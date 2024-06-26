@@ -7,7 +7,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/stretchr/testify v1.9.0
-	github.com/xmidt-org/chronon v0.1.1
+	github.com/xmidt-org/chronon v0.1.3
 	go.uber.org/dig v1.17.1 // indirect
 	go.uber.org/fx v1.22.1
 	go.uber.org/multierr v1.10.0 // indirect
