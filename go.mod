@@ -6,7 +6,7 @@ require (
 	github.com/alecthomas/kong v1.4.0
 	github.com/gorilla/mux v1.8.1
 	github.com/stretchr/objx v0.5.2 // indirect
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	github.com/xmidt-org/chronon v0.1.1
 	go.uber.org/dig v1.18.0 // indirect
 	go.uber.org/fx v1.23.0
