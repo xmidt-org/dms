@@ -3,7 +3,7 @@ module github.com/xmidt-org/dms
 go 1.19
 
 require (
-	github.com/alecthomas/kong v1.8.1
+	github.com/alecthomas/kong v1.9.0
 	github.com/gorilla/mux v1.8.1
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/stretchr/testify v1.10.0
