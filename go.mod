@@ -1,6 +1,6 @@
 module github.com/xmidt-org/dms
 
-go 1.19
+go 1.22
 
 require (
 	github.com/alecthomas/kong v1.9.0
@@ -8,8 +8,8 @@ require (
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/stretchr/testify v1.10.0
 	github.com/xmidt-org/chronon v0.1.1
-	go.uber.org/dig v1.18.0 // indirect
-	go.uber.org/fx v1.23.0
+	go.uber.org/dig v1.19.0 // indirect
+	go.uber.org/fx v1.24.0
 	go.uber.org/multierr v1.10.0 // indirect
 )
 
