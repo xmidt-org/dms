@@ -48,13 +48,13 @@ func (suite *ActionSuite) assertCmd(cmd *exec.Cmd, expectedDir string, expectedP
 
 func (suite *ActionSuite) TestEmptyCommand() {
 	testData := []CommandLine{
-		CommandLine{
+		{
 			Exec: []string{""},
 		},
-		CommandLine{
+		{
 			Exec: []string{"ls", ""},
 		},
-		CommandLine{
+		{
 			Exec: []string{"", "ls"},
 		},
 	}
@@ -96,7 +96,7 @@ func (suite *ActionSuite) TestValidCommands() {
 				Exec: []string{`echo hello`},
 			},
 			expectedPieces: [][]string{
-				[]string{"echo", "hello"},
+				{"echo", "hello"},
 			},
 		},
 		{
@@ -104,8 +104,8 @@ func (suite *ActionSuite) TestValidCommands() {
 				Exec: []string{"ls -al", `echo test`},
 			},
 			expectedPieces: [][]string{
-				[]string{"ls", "-al"},
-				[]string{"echo", "test"},
+				{"ls", "-al"},
+				{"echo", "test"},
 			},
 		},
 		{
@@ -113,9 +113,9 @@ func (suite *ActionSuite) TestValidCommands() {
 				Exec: []string{"netstat -an", "ls", `echo another test`},
 			},
 			expectedPieces: [][]string{
-				[]string{"netstat", "-an"},
-				[]string{"ls"},
-				[]string{"echo", "another", "test"},
+				{"netstat", "-an"},
+				{"ls"},
+				{"echo", "another", "test"},
 			},
 		},
 	}
