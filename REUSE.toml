@@ -1,0 +1,100 @@
+version = 1
+SPDX-PackageName = "retry"
+SPDX-PackageSupplier = "John Bass <john_bass2@cable.comcast.com>"
+SPDX-PackageDownloadLocation = "https://github.com/xmidt-org/dms"
+
+[[annotations]]
+path = "NOTICE"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = ".gitignore"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = ".whitesource"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = "CONTRIBUTING.md"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = "MAINTAINERS.md"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = "CHANGELOG.md"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = "README.md"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = "go.mod"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = "go.sum"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = "conf/dms.env.example"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = "conf/dms.service"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = "deploy/packaging/dms.spec"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = ".dockerignore"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = ".golangci.yaml"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = "Makefile"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = "rpkg.macros"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC"
+SPDX-License-Identifier = "Apache-2.0"
