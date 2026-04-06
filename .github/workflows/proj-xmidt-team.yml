@@ -18,5 +18,5 @@ permissions:
 
 jobs:
   package:
-    uses: xmidt-org/.github/.github/workflows/proj-template.yml@2499ba298ccd297c941bff75404de947c80d8346 # 2023-03-24
+    uses: xmidt-org/shared-go/.github/workflows/proj.yml@60838be4a68ca029af165c3d9067aa41f4e8db14 # 2025-10-30
     secrets: inherit
