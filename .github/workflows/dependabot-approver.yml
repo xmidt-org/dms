@@ -11,5 +11,5 @@ permissions:
 
 jobs:
   package:
-    uses: xmidt-org/shared-go/.github/workflows/approve-dependabot.yml@f0ba95798ab73202b3f2812ea0209db07d99c6e8 # 2024-06-21
+    uses: xmidt-org/shared-go/.github/workflows/approve-dependabot.yml@8f72b028f3bbb741244c9fde8633ecb5ceb77fd0 # 2024-06-21
     secrets: inherit
