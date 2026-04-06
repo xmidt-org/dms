@@ -27,3 +27,6 @@ linters:
         linters:
           - dupl
           - funlen
+      - text: "ST1005:"
+        linters:
+          - staticcheck
