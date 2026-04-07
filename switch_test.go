@@ -294,23 +294,15 @@ func (suite *SwitchSuite) testPostpone(ttl time.Duration, actionCount, maxMisses
 		clock.Add(ttl / 2) // no trigger should happen yet
 		suite.True(s.Postpone(PostponeRequest{Source: "test"}))
 
-		// the ticker should be reset to suite.now plus ttl*1.5, since
-		// we advanced by half the TTL first
+		// Wait for the ticker to be reset to suite.now plus ttl*1.5, since
+		// we advanced by half the TTL first. Use Eventually to handle the
+		// async nature of the postpone channel processing.
+		expected := suite.now.Add(ttl * 3 / 2)
 		suite.Require().Eventually(
-			func() bool {
-				expected := suite.now.Add(ttl * 3 / 2)
-				when := ft.When()
-
-				// tolerate small scheduling / ordering differences
-				d := when.Sub(expected)
-				if d < 0 {
-					d = -d
-				}
-				return d <= 250*time.Millisecond
-			},
+			func() bool { return ft.When().Equal(expected) },
 			time.Second,
-			time.Second/4,
-			"The ticker was not reset",
+			10*time.Millisecond,
+			"The ticker was not reset to the expected time",
 		)
 
 		calls := mockActions.expectRunOnce(errors.New("expected"))
@@ -346,23 +338,15 @@ func (suite *SwitchSuite) testPostpone(ttl time.Duration, actionCount, maxMisses
 		clock.Add(ttl / 2) // no trigger should happen yet
 		suite.True(s.Postpone(PostponeRequest{Source: "test"}))
 
-		// the ticker should be reset to suite.now plus ttl*1.5, since
-		// we advanced by half the TTL first
+		// Wait for the ticker to be reset to suite.now plus ttl*1.5, since
+		// we advanced by half the TTL first. Use Eventually to handle the
+		// async nature of the postpone channel processing.
+		expected := suite.now.Add(ttl * 3 / 2)
 		suite.Require().Eventually(
-			func() bool {
-				expected := suite.now.Add(ttl * 3 / 2)
-				when := ft.When()
-
-				// tolerate small scheduling / ordering differences
-				d := when.Sub(expected)
-				if d < 0 {
-					d = -d
-				}
-				return d <= 250*time.Millisecond
-			},
+			func() bool { return ft.When().Equal(expected) },
 			time.Second,
-			time.Second/4,
-			"The ticker was not reset",
+			10*time.Millisecond,
+			"The ticker was not reset to the expected time",
 		)
 
 		calls := mockActions.expectRunOnce(errors.New("expected"))
