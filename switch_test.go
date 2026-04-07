@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/suite"
@@ -275,87 +276,87 @@ func (suite *SwitchSuite) TestTrigger() {
 
 func (suite *SwitchSuite) testPostpone(ttl time.Duration, actionCount, maxMisses int) {
 	suite.Run("NewSwitch", func() {
-		var (
-			mockActions = newMockActions(actionCount)
-			cfg, clock  = suite.switchConfig(ttl, maxMisses, mockActions.actions()...)
-			s           = suite.newSwitch(cfg)
-			done        = make(chan error)
-			onTicker    = make(chan chronon.FakeTicker, 1)
-		)
+		synctest.Test(suite.T(), func(t *testing.T) {
+			var (
+				mockActions = newMockActions(actionCount)
+				cfg, clock  = suite.switchConfig(ttl, maxMisses, mockActions.actions()...)
+				s           = suite.newSwitch(cfg)
+				done        = make(chan error)
+				onTicker    = make(chan chronon.FakeTicker, 1)
+			)
 
-		clock.NotifyOnTicker(onTicker)
-		go func() {
-			done <- s.Activate()
-		}()
+			clock.NotifyOnTicker(onTicker)
+			go func() {
+				done <- s.Activate()
+			}()
 
-		ft := <-onTicker
-		suite.Equal(ErrActive, s.Activate()) // idempotent
+			ft := <-onTicker
+			suite.Equal(ErrActive, s.Activate()) // idempotent
 
-		clock.Add(ttl / 2) // no trigger should happen yet
-		suite.True(s.Postpone(PostponeRequest{Source: "test"}))
+			now := clock.Add(ttl / 2) // no trigger should happen yet
+			suite.True(s.Postpone(PostponeRequest{Source: "test"}))
 
-		// the ticker should be reset to suite.now plus ttl*1.5, since
-		// we advanced by half the TTL first
-		suite.Require().Eventually(
-			func() bool { return ft.When().Equal(suite.now.Add(ttl * 3 / 2)) },
-			time.Second,
-			time.Second/4,
-			"The ticker was not reset",
-		)
+			// Wait for the postpone to be processed. synctest.Wait() ensures all
+			// goroutines in the bubble are durably blocked, which means the postpone
+			// channel has been processed and the ticker has been reset.
+			synctest.Wait()
+			expected := now.Add(ttl)
+			suite.Require().True(ft.When().Equal(expected), "The ticker was not reset to the expected time")
 
-		calls := mockActions.expectRunOnce(errors.New("expected"))
+			calls := mockActions.expectRunOnce(errors.New("expected"))
 
-		// advance by steps to force misses and finally a trigger
-		for i := 0; i <= maxMisses; i++ {
-			clock.Add(ttl)
-		}
+			// advance by steps to force misses and finally a trigger
+			for i := 0; i <= maxMisses; i++ {
+				clock.Add(ttl)
+			}
 
-		mockActions.waitForCalls(suite.T(), time.Second, calls)
-		suite.NoError(<-done)
-		mockActions.assertExpectations(suite.T())
+			mockActions.waitForCalls(suite.T(), time.Second, calls)
+			suite.NoError(<-done)
+			mockActions.assertExpectations(suite.T())
+		})
 	})
 
 	suite.Run("provideSwitch", func() {
-		var (
-			mockActions = newMockActions(actionCount)
-			cfg, clock  = suite.switchConfig(ttl, maxMisses, mockActions.actions()...)
-			s           *Switch
-			p           Postponer
-			app         = suite.provideSwitch(cfg, &s, &p)
-			onTicker    = make(chan chronon.FakeTicker, 1)
-		)
+		synctest.Test(suite.T(), func(t *testing.T) {
+			var (
+				mockActions = newMockActions(actionCount)
+				cfg, clock  = suite.switchConfig(ttl, maxMisses, mockActions.actions()...)
+				s           *Switch
+				p           Postponer
+				app         = suite.provideSwitch(cfg, &s, &p)
+				onTicker    = make(chan chronon.FakeTicker, 1)
+			)
 
-		suite.Require().NotNil(s)
-		suite.Require().NotNil(p)
-		clock.NotifyOnTicker(onTicker)
-		app.RequireStart()
+			suite.Require().NotNil(s)
+			suite.Require().NotNil(p)
+			clock.NotifyOnTicker(onTicker)
+			app.RequireStart()
 
-		ft := <-onTicker
-		suite.Equal(ErrActive, s.Activate()) // idempotent
+			ft := <-onTicker
+			suite.Equal(ErrActive, s.Activate()) // idempotent
 
-		clock.Add(ttl / 2) // no trigger should happen yet
-		suite.True(s.Postpone(PostponeRequest{Source: "test"}))
+			now := clock.Add(ttl / 2) // no trigger should happen yet
+			suite.True(s.Postpone(PostponeRequest{Source: "test"}))
 
-		// the ticker should be reset to suite.now plus ttl*1.5, since
-		// we advanced by half the TTL first
-		suite.Require().Eventually(
-			func() bool { return ft.When().Equal(suite.now.Add(ttl * 3 / 2)) },
-			time.Second,
-			time.Second/4,
-			"The ticker was not reset",
-		)
+			// Wait for the postpone to be processed. synctest.Wait() ensures all
+			// goroutines in the bubble are durably blocked, which means the postpone
+			// channel has been processed and the ticker has been reset.
+			synctest.Wait()
+			expected := now.Add(ttl)
+			suite.Require().True(ft.When().Equal(expected), "The ticker was not reset to the expected time")
 
-		calls := mockActions.expectRunOnce(errors.New("expected"))
+			calls := mockActions.expectRunOnce(errors.New("expected"))
 
-		// advance by steps to force misses and finally a trigger
-		for i := 0; i <= maxMisses; i++ {
-			clock.Add(ttl)
-		}
+			// advance by steps to force misses and finally a trigger
+			for i := 0; i <= maxMisses; i++ {
+				clock.Add(ttl)
+			}
 
-		mockActions.waitForCalls(suite.T(), time.Second, calls)
-		app.RequireStop()
+			mockActions.waitForCalls(suite.T(), time.Second, calls)
+			app.RequireStop()
 
-		mockActions.assertExpectations(suite.T())
+			mockActions.assertExpectations(suite.T())
+		})
 	})
 }
 

@@ -1,6 +1,6 @@
 module github.com/xmidt-org/dms
 
-go 1.24
+go 1.26
 
 require (
 	github.com/alecthomas/kong v1.15.0
