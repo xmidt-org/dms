@@ -291,13 +291,13 @@ func (suite *SwitchSuite) testPostpone(ttl time.Duration, actionCount, maxMisses
 		ft := <-onTicker
 		suite.Equal(ErrActive, s.Activate()) // idempotent
 
-		clock.Add(ttl / 2) // no trigger should happen yet
+		now := clock.Add(ttl / 2) // no trigger should happen yet
 		suite.True(s.Postpone(PostponeRequest{Source: "test"}))
 
-		// Wait for the ticker to be reset to suite.now plus ttl*1.5, since
-		// we advanced by half the TTL first. Use Eventually to handle the
-		// async nature of the postpone channel processing.
-		expected := suite.now.Add(ttl * 3 / 2)
+		// Wait for the ticker to be reset. When Reset is called, the ticker
+		// is set to the current clock time plus ttl. Use Eventually to handle
+		// the async nature of the postpone channel processing.
+		expected := now.Add(ttl)
 		suite.Require().Eventually(
 			func() bool { return ft.When().Equal(expected) },
 			time.Second,
@@ -335,13 +335,13 @@ func (suite *SwitchSuite) testPostpone(ttl time.Duration, actionCount, maxMisses
 		ft := <-onTicker
 		suite.Equal(ErrActive, s.Activate()) // idempotent
 
-		clock.Add(ttl / 2) // no trigger should happen yet
+		now := clock.Add(ttl / 2) // no trigger should happen yet
 		suite.True(s.Postpone(PostponeRequest{Source: "test"}))
 
-		// Wait for the ticker to be reset to suite.now plus ttl*1.5, since
-		// we advanced by half the TTL first. Use Eventually to handle the
-		// async nature of the postpone channel processing.
-		expected := suite.now.Add(ttl * 3 / 2)
+		// Wait for the ticker to be reset. When Reset is called, the ticker
+		// is set to the current clock time plus ttl. Use Eventually to handle
+		// the async nature of the postpone channel processing.
+		expected := now.Add(ttl)
 		suite.Require().Eventually(
 			func() bool { return ft.When().Equal(expected) },
 			time.Second,
