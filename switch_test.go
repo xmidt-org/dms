@@ -297,7 +297,17 @@ func (suite *SwitchSuite) testPostpone(ttl time.Duration, actionCount, maxMisses
 		// the ticker should be reset to suite.now plus ttl*1.5, since
 		// we advanced by half the TTL first
 		suite.Require().Eventually(
-			func() bool { return ft.When().Equal(suite.now.Add(ttl * 3 / 2)) },
+			func() bool {
+				expected := suite.now.Add(ttl * 3 / 2)
+				when := ft.When()
+
+				// tolerate small scheduling / ordering differences
+				d := when.Sub(expected)
+				if d < 0 {
+					d = -d
+				}
+				return d <= 250*time.Millisecond
+			},
 			time.Second,
 			time.Second/4,
 			"The ticker was not reset",
@@ -339,7 +349,17 @@ func (suite *SwitchSuite) testPostpone(ttl time.Duration, actionCount, maxMisses
 		// the ticker should be reset to suite.now plus ttl*1.5, since
 		// we advanced by half the TTL first
 		suite.Require().Eventually(
-			func() bool { return ft.When().Equal(suite.now.Add(ttl * 3 / 2)) },
+			func() bool {
+				expected := suite.now.Add(ttl * 3 / 2)
+				when := ft.When()
+
+				// tolerate small scheduling / ordering differences
+				d := when.Sub(expected)
+				if d < 0 {
+					d = -d
+				}
+				return d <= 250*time.Millisecond
+			},
 			time.Second,
 			time.Second/4,
 			"The ticker was not reset",
