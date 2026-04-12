@@ -37,6 +37,6 @@ jobs:
         .release/docker
         LICENSE
         NOTICE
-      release-type:   program
+      release-type:   library
       yaml-lint-skip: false
     secrets: inherit
