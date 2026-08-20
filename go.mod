@@ -6,7 +6,7 @@ require (
 	github.com/alecthomas/kong v1.16.1
 	github.com/gorilla/mux v1.8.1
 	github.com/stretchr/objx v0.5.3 // indirect
-	github.com/stretchr/testify v1.12.0
+	github.com/stretchr/testify v1.12.1
 	github.com/xmidt-org/chronon v0.1.13
 	go.uber.org/dig v1.19.0 // indirect
 	go.uber.org/fx v1.24.0
@@ -15,6 +15,6 @@ require (
 
 require (
 	go.uber.org/zap v1.26.0 // indirect
+	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/sys v0.0.0-20220908150016-7ac13a9a928d // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
