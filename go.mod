@@ -3,7 +3,7 @@ module github.com/xmidt-org/dms
 go 1.26
 
 require (
-	github.com/alecthomas/kong v1.16.1
+	github.com/alecthomas/kong v1.17.0
 	github.com/gorilla/mux v1.8.1
 	github.com/stretchr/objx v0.5.3 // indirect
 	github.com/stretchr/testify v1.12.1
