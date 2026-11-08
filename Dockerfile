@@ -1,41 +1,17 @@
 # SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC
 # SPDX-License-Identifier: Apache-2.0
-FROM docker.io/library/golang:1.19-alpine as builder
+FROM alpine:latest
 
-WORKDIR /src
+# The dms binary is built by goreleaser and provided in the build context.
+COPY dms /dms
 
-ARG VERSION
-ARG GITCOMMIT
-ARG BUILDTIME
-
-RUN apk add --no-cache --no-progress \
-    ca-certificates \
-    make \
-    curl \
-    git \
-    openssh \
-    gcc \
-    libc-dev \
-    upx
-
-RUN mkdir -p /go/bin && \
-    curl -o /go/bin/spruce https://github.com/geofffranks/spruce/releases/download/v1.29.0/spruce-linux-amd64 && \
-    chmod +x /go/bin/spruce
-COPY . .
-RUN make test release
-
-FROM alpine:3.12.1
-
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=builder /src/dms /src/dms.yaml /src/deploy/packaging/entrypoint.sh /go/bin/spruce /src/Dockerfile /src/NOTICE /src/LICENSE /src/CHANGELOG.md /
-COPY --from=builder /src/deploy/packaging/dms.yaml /tmp/dms.yaml
-
-RUN mkdir /etc/dms/ && touch /etc/dms/dms.yaml && chmod 666 /etc/dms/dms.yaml
+# Include compliance details about the container and what it contains.
+COPY Dockerfile /
+COPY NOTICE     /
+COPY LICENSE    /
 
 USER nobody
 
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["/dms"]
 
-EXPOSE 11000
-
-CMD ["/dms"]
+EXPOSE 8080
