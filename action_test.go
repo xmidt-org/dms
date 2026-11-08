@@ -125,7 +125,7 @@ func (suite *ActionSuite) TestValidCommands() {
 			suite.Run(strconv.Itoa(i), func() {
 				actions, err := ParseExec(testCase.commandLine)
 				suite.Require().NoError(err)
-				suite.Require().Equal(len(testCase.commandLine.Exec), len(actions))
+				suite.Require().Len(actions, len(testCase.commandLine.Exec))
 
 				for j, a := range actions {
 					suite.assertCmd(
@@ -151,13 +151,13 @@ func (suite *ActionSuite) TestValidCommands() {
 				)
 
 				// +1 for the shutdown action
-				suite.Require().Equal(len(testCase.commandLine.Exec)+1, len(actions))
+				suite.Require().Len(actions, len(testCase.commandLine.Exec)+1)
 				if suite.IsType(ShutdownerAction{}, actions[len(actions)-1]) {
 					sa := actions[len(actions)-1].(ShutdownerAction)
 					suite.NotNil(sa.Shutdowner)
 				}
 
-				for j := 0; j < len(actions)-1; j++ {
+				for j := range len(actions) - 1 {
 					suite.assertCmd(
 						actions[j].(*exec.Cmd),
 						testCase.commandLine.Dir,
@@ -176,7 +176,7 @@ func (suite *ActionSuite) TestSuccess() {
 	}
 
 	suite.NotEmpty(sa.String())
-	suite.NoError(sa.Run())
+	suite.Require().NoError(sa.Run())
 	suite.shutdowner.AssertExpectations(suite.T())
 }
 

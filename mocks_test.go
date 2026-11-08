@@ -65,7 +65,6 @@ func (ma mockActions) actions() []Action {
 func (ma mockActions) expectRunOnce(expectedErr error) <-chan int {
 	calls := make(chan int, len(ma))
 	for i, e := range ma {
-		i := i
 		e.ExpectRun().Run(func(mock.Arguments) {
 			calls <- i
 		}).Return(expectedErr).Once()
@@ -79,7 +78,7 @@ func (ma mockActions) waitForCalls(t assert.TestingT, waitFor time.Duration, cal
 		timer := time.NewTimer(waitFor)
 		defer timer.Stop()
 
-		for i := 0; i < len(ma); i++ {
+		for range ma {
 			select {
 			case <-calls:
 				// passing
@@ -103,7 +102,7 @@ func (ma mockActions) assertExpectations(t mock.TestingT) {
 
 func newMockActions(count int) mockActions {
 	ma := make(mockActions, 0, count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		ma = append(ma, &mockAction{
 			label: fmt.Sprintf("action[%d]", i),
 		})

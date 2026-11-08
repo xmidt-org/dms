@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gorilla/mux"
 	"go.uber.org/fx"
@@ -48,8 +49,7 @@ type PostponeHandler struct {
 func (ph PostponeHandler) ServeHTTP(response http.ResponseWriter, request *http.Request) {
 	err := request.ParseForm()
 	if err != nil {
-		response.WriteHeader(http.StatusBadRequest)
-		response.Write([]byte(err.Error()))
+		http.Error(response, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -86,8 +86,9 @@ func provideHTTP() fx.Option {
 				}
 
 				return &http.Server{
-					Addr:    address,
-					Handler: r,
+					Addr:              address,
+					Handler:           r,
+					ReadHeaderTimeout: 10 * time.Second,
 				}
 			},
 		),
@@ -107,7 +108,7 @@ func provideHTTP() fx.Option {
 						logger.Printf("PUT http://%s%s to postpone triggering actions", server.Addr, PostponePath)
 
 						go func() {
-							defer s.Shutdown()
+							defer func() { _ = s.Shutdown() }()
 							logServerError(logger, server.Serve(l))
 						}()
 

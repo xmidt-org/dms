@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC
 // SPDX-License-Identifier: Apache-2.0
 
+// Package main implements dms, a dead man's switch that triggers actions unless postponed.
 package main
 
 import (

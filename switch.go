@@ -59,9 +59,9 @@ func (pr PostponeRequest) String() string {
 
 	if len(pr.RemoteAddr) > 0 {
 		return fmt.Sprintf("[source=%s] [remoteaddr=%s]", source, pr.RemoteAddr)
-	} else {
-		return fmt.Sprintf("[source=%s]", source)
 	}
+
+	return fmt.Sprintf("[source=%s]", source)
 }
 
 // Postponer represents something that can postpone triggering actions.
@@ -316,7 +316,7 @@ func provideSwitch() fx.Option {
 			func(l fx.Lifecycle, s *Switch) {
 				l.Append(fx.Hook{
 					OnStart: func(context.Context) error {
-						go s.Activate()
+						go func() { _ = s.Activate() }()
 						return nil
 					},
 					OnStop: func(context.Context) (err error) {

@@ -171,7 +171,7 @@ func (suite *SwitchSuite) testCancelBeforeTrigger(actionCount int) {
 
 		<-onTicker
 		suite.Equal(ErrActive, s.Activate()) // idempotent
-		suite.NoError(s.Deactivate())
+		suite.Require().NoError(s.Deactivate())
 		suite.Equal(ErrDeactivated, <-done)
 		mockActions.assertExpectations(suite.T())
 	})
@@ -232,7 +232,7 @@ func (suite *SwitchSuite) testTrigger(actionCount int) {
 		clock.Set(ft.When())
 		mockActions.waitForCalls(suite.T(), time.Second, calls)
 
-		suite.NoError(<-done)
+		suite.Require().NoError(<-done)
 		mockActions.assertExpectations(suite.T())
 	})
 
@@ -276,7 +276,7 @@ func (suite *SwitchSuite) TestTrigger() {
 
 func (suite *SwitchSuite) testPostpone(ttl time.Duration, actionCount, maxMisses int) {
 	suite.Run("NewSwitch", func() {
-		synctest.Test(suite.T(), func(t *testing.T) {
+		synctest.Test(suite.T(), func(*testing.T) {
 			var (
 				mockActions = newMockActions(actionCount)
 				cfg, clock  = suite.switchConfig(ttl, maxMisses, mockActions.actions()...)
@@ -311,13 +311,13 @@ func (suite *SwitchSuite) testPostpone(ttl time.Duration, actionCount, maxMisses
 			}
 
 			mockActions.waitForCalls(suite.T(), time.Second, calls)
-			suite.NoError(<-done)
+			suite.Require().NoError(<-done)
 			mockActions.assertExpectations(suite.T())
 		})
 	})
 
 	suite.Run("provideSwitch", func() {
-		synctest.Test(suite.T(), func(t *testing.T) {
+		synctest.Test(suite.T(), func(*testing.T) {
 			var (
 				mockActions = newMockActions(actionCount)
 				cfg, clock  = suite.switchConfig(ttl, maxMisses, mockActions.actions()...)

@@ -52,8 +52,8 @@ func (suite *LoggerSuite) TestWriterLogger() {
 
 func (suite *LoggerSuite) TestWriterLoggerError() {
 	r, w := io.Pipe()
-	r.Close()
-	w.Close()
+	_ = r.Close()
+	_ = w.Close()
 
 	wl := WriterLogger{Writer: w}
 	suite.Panics(func() {

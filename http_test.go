@@ -29,7 +29,7 @@ func (suite *PostponeHandlerSuite) newRequest(source, remoteAddr string, body io
 		target = fmt.Sprintf("%s?%s=%s", target, SourceParameter, source)
 	}
 
-	r, err := http.NewRequest("PUT", target, body)
+	r, err := http.NewRequestWithContext(context.Background(), http.MethodPut, target, body)
 	suite.Require().NoError(err)
 	suite.Require().NotNil(r)
 	r.RemoteAddr = remoteAddr
@@ -57,7 +57,7 @@ func (suite *PostponeHandlerSuite) testPostponed(source, remoteAddr string) {
 	suite.Equal(http.StatusOK, result.StatusCode)
 
 	body, err := io.ReadAll(result.Body)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.Empty(string(body)) // string errors are easier to debug
 
 	p.AssertExpectations(suite.T())
@@ -94,7 +94,7 @@ func (suite *PostponeHandlerSuite) testAlreadyTriggered(source, remoteAddr strin
 	suite.Equal(http.StatusServiceUnavailable, result.StatusCode)
 
 	body, err := io.ReadAll(result.Body)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.Empty(string(body)) // string errors are easier to debug
 
 	p.AssertExpectations(suite.T())
@@ -128,7 +128,7 @@ func (suite *PostponeHandlerSuite) TestParseFormError() {
 	suite.Equal(http.StatusBadRequest, result.StatusCode)
 
 	body, err := io.ReadAll(result.Body)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.NotEmpty(string(body)) // string errors are easier to debug
 
 	p.AssertExpectations(suite.T())
@@ -154,7 +154,7 @@ func (suite *ProvideHTTPSuite) newBadApp(cl CommandLine, p Postponer) {
 		),
 	)
 
-	defer app.Stop(context.Background())
+	defer func() { _ = app.Stop(context.Background()) }()
 	suite.Error(app.Start(context.Background()))
 }
 
@@ -191,13 +191,13 @@ func (suite *ProvideHTTPSuite) testPostponed(cl CommandLine) {
 	})).Once().Return(true)
 
 	target := fmt.Sprintf("http://%s%s", s.Addr, PostponePath)
-	request, err := http.NewRequest("PUT", target, nil)
+	request, err := http.NewRequestWithContext(context.Background(), http.MethodPut, target, nil)
 	suite.Require().NoError(err)
 
 	response, err := http.DefaultClient.Do(request)
 	suite.Require().NoError(err)
 	suite.Require().NotNil(response)
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	suite.Equal(http.StatusOK, response.StatusCode)
 
 	body, err := io.ReadAll(response.Body)
@@ -238,14 +238,14 @@ func (suite *ProvideHTTPSuite) TestNotFound() {
 	suite.Require().NotEmpty(s.Addr)
 
 	target := fmt.Sprintf("http://%s/nosuch", s.Addr)
-	request, err := http.NewRequest("PUT", target, nil)
+	request, err := http.NewRequestWithContext(context.Background(), http.MethodPut, target, nil)
 	suite.Require().NoError(err)
 
 	response, err := http.DefaultClient.Do(request)
 	suite.Require().NoError(err)
 	suite.Require().NotNil(response)
-	io.Copy(io.Discard, response.Body)
-	response.Body.Close()
+	_, _ = io.Copy(io.Discard, response.Body)
+	_ = response.Body.Close()
 
 	suite.Equal(http.StatusNotFound, response.StatusCode)
 
@@ -265,14 +265,14 @@ func (suite *ProvideHTTPSuite) TestMethodNotAllowed() {
 	suite.Require().NotEmpty(s.Addr)
 
 	target := fmt.Sprintf("http://%s%s", s.Addr, PostponePath)
-	request, err := http.NewRequest("GET", target, nil)
+	request, err := http.NewRequestWithContext(context.Background(), http.MethodGet, target, nil)
 	suite.Require().NoError(err)
 
 	response, err := http.DefaultClient.Do(request)
 	suite.Require().NoError(err)
 	suite.Require().NotNil(response)
-	io.Copy(io.Discard, response.Body)
-	response.Body.Close()
+	_, _ = io.Copy(io.Discard, response.Body)
+	_ = response.Body.Close()
 
 	suite.Equal(http.StatusMethodNotAllowed, response.StatusCode)
 
@@ -285,7 +285,7 @@ func (suite *ProvideHTTPSuite) TestListenError() {
 	var lc net.ListenConfig
 	bound, err := lc.Listen(context.Background(), "tcp", ":0")
 	suite.Require().NoError(err)
-	defer bound.Close()
+	defer func() { _ = bound.Close() }()
 
 	p := new(mockPostponer)
 	suite.newBadApp(

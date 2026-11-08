@@ -3,30 +3,60 @@ version: "2"
 
 linters:
   enable:
-    - dupl
-    - errorlint
-    - goconst
-    - misspell
-    - unconvert
-    - prealloc
-  disable:
+    - asasalint
+    - asciicheck
+    - bidichk
     - bodyclose
-    - errcheck
-    - ineffassign
-    - funlen
+    - copyloopvar
+    - dupl
+    - durationcheck
+    - errname
+    - errorlint
+    - exhaustive
+    - fatcontext
+    - forcetypeassert
+    - gocheckcompilerdirectives
+    - goconst
+    - gocritic
     - gosec
+    - intrange
+    - makezero
+    - misspell
+    - nilerr
+    - noctx
+    - nolintlint
+    - perfsprint
+    - prealloc
+    - predeclared
+    - reassign
+    - revive
+    - testifylint
+    - unconvert
+    - usestdlibvars
+    - wastedassign
+    - whitespace
   settings:
     errorlint:
       errorf: false
     misspell:
       locale: US
+    nolintlint:
+      require-explanation: true
+      require-specific: true
   exclusions:
     generated: lax
     rules:
       - path: _test.go
         linters:
           - dupl
-          - funlen
+          - forcetypeassert
+          - goconst
+          - gosec
       - text: "ST1005:"
         linters:
           - staticcheck
+
+formatters:
+  enable:
+    - gofmt
+    - goimports

@@ -46,6 +46,7 @@ func ParseExec(cl CommandLine) ([]Action, error) {
 			return nil, ErrEmptyCommand
 		}
 
+		//nolint:gosec,noctx // running user supplied commands is the purpose of this tool; actions have no context
 		cmd := exec.Command(pieces[0], pieces[1:]...)
 		cmd.Dir = cl.Dir
 		cmd.Stdout = os.Stdout
